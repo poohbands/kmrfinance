@@ -355,18 +355,54 @@ function inventory(useDraft){
 const LS="kamalasrom-fy2570-v1";
 function localLoad(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");S.months=o.months||{};S.admin=o.admin||{carry:null,cogs:{}};if(!S.admin.cogs)S.admin.cogs={};S.users=o.users||{};S.audit=o.audit||[];}catch(e){}}
 function localSave(){try{localStorage.setItem(LS,JSON.stringify({months:S.months,admin:S.admin,users:S.users,audit:S.audit.slice(0,500)}));return true;}catch(e){return false;}}
-async function persistMonth(key,doc){if(S.mode==="db"){await S.db.collection("months").doc(key).set(doc);}S.months[key]=doc;if(S.mode!=="db"&&!localSave())throw {code:"local"};}
-async function persistAdmin(doc){if(S.mode==="db"){await S.db.doc("admin/inventory").set(doc);}S.admin=doc;if(S.mode!=="db"&&!localSave())throw {code:"local"};}
-async function persistUser(u,doc){if(S.mode==="db"){await S.db.collection("users").doc(u).set(doc);}S.users[u]=doc;if(S.mode!=="db"&&!localSave())throw {code:"local"};}
-async function removeUser(u){if(S.mode==="db"){await S.db.collection("users").doc(u).delete();}delete S.users[u];if(S.mode!=="db")localSave();}
+async function persistMonth(key,doc){
+  if(S.mode==="db"){await S.db.collection("months").doc(key).set(doc);}
+  else if(S.mode==="neon"){
+    const r=await fetch("/api/months/"+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(doc)});
+    if(!r.ok)throw {code:"neon_error"};
+  }
+  S.months[key]=doc;if(S.mode==="local"&&!localSave())throw {code:"local"};
+}
+async function persistAdmin(doc){
+  if(S.mode==="db"){await S.db.doc("admin/inventory").set(doc);}
+  else if(S.mode==="neon"){
+    const r=await fetch("/api/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(doc)});
+    if(!r.ok)throw {code:"neon_error"};
+  }
+  S.admin=doc;if(S.mode==="local"&&!localSave())throw {code:"local"};
+}
+async function persistUser(u,doc){
+  if(S.mode==="db"){await S.db.collection("users").doc(u).set(doc);}
+  else if(S.mode==="neon"){
+    const r=await fetch("/api/users/"+encodeURIComponent(u),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(doc)});
+    if(!r.ok)throw {code:"neon_error"};
+  }
+  S.users[u]=doc;if(S.mode==="local"&&!localSave())throw {code:"local"};
+}
+async function removeUser(u){
+  if(S.mode==="db"){await S.db.collection("users").doc(u).delete();}
+  else if(S.mode==="neon"){
+    const r=await fetch("/api/users/"+encodeURIComponent(u),{method:"DELETE"});
+    if(!r.ok)throw {code:"neon_error"};
+  }
+  delete S.users[u];if(S.mode==="local")localSave();
+}
 async function logAudit(e){
   const entry=Object.assign({at:new Date().toISOString(),by:S.session.u,byName:S.session.name},e);
   const id=Date.now()+"-"+Math.random().toString(36).slice(2,8);
-  try{if(S.mode==="db")await S.db.collection("audit").doc(id).set(entry);else{S.audit.unshift(Object.assign({id},entry));localSave();}}catch(err){}
+  entry.id=id;
+  try{
+    if(S.mode==="db")await S.db.collection("audit").doc(id).set(entry);
+    else if(S.mode==="neon"){
+      await fetch("/api/audit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(entry)});
+      S.audit.unshift(entry);
+    }else{S.audit.unshift(entry);localSave();}
+  }catch(err){}
 }
 function errText(e,fallback){const c=e&&e.code;
   if(c==="invalid_argument")return "บัญชี claude.ai นี้ไม่มีสิทธิ์บันทึกส่วนนี้ (ต้องมีสิทธิ์ Editor)";
-  if(c==="quota_exceeded")return "พื้นที่เก็บข้อมูลเต็ม แจ้งเจ้าของแบบฟอร์ม";return fallback||"บันทึกไม่สำเร็จ ลองอีกครั้ง";}
+  if(c==="quota_exceeded")return "พื้นที่เก็บข้อมูลเต็ม แจ้งเจ้าของแบบฟอร์ม";
+  if(c==="neon_error")return "บันทึกข้อมูลไปยัง Neon ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";return fallback||"บันทึกไม่สำเร็จ ลองอีกครั้ง";}
 
 // ---------- session ----------
 function startSession(sess){S.session=sess;ssSet("fy2570-session",sess.u);S.drafts={};S.adminDraft=null;S.reason="";renderShell();}
@@ -757,21 +793,52 @@ async function boot(){
   const hasClaude=!!(window.claude&&window.claude.use);
   const [db,user,dl]=hasClaude?await Promise.all([window.claude.use("db"),window.claude.use("user"),window.claude.use("downloads")]):[null,null,null];
   S.downloads=dl;S.standalone=!hasClaude;
-  if(!db){S.mode="local";localLoad();S.usersLoaded=true;S.canAdmin=true;
-    setConn("โหมดในเครื่อง: ข้อมูลบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น ยังไม่แชร์กับผู้อื่น",true);restoreSession();renderShell();return;}
-  S.db=db;S.mode="db";
-  if(user){const [ce,cw]=await Promise.all([user.canEdit(),user.can("data.write")]);S.canAdmin=!!ce;S.readonlyMonths=cw===false;}
-  setConn("กำลังโหลดข้อมูล…");
-  const need=new Set(["months","admin","users"]);
-  const timer=setTimeout(()=>{if(need.size)setConn("ยังโหลดข้อมูลไม่ได้ ข้อมูลที่เห็นอาจยังไม่ล่าสุด",true);},10000);
-  const done=n=>{if(need.delete(n)&&!need.size){clearTimeout(timer);setConn("เชื่อมต่อแล้ว · ข้อมูลแชร์ร่วมกันทุกคน");}};
-  const fail=err=>{clearTimeout(timer);setConn("เชื่อมต่อฐานข้อมูลไม่ได้ ("+err.code+")",true);};
-  db.collection("months").onSnapshot(qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data();});S.months=o;if(!qs.metadata.fromCache)done("months");refreshAll();},fail);
-  db.doc("admin/inventory").onSnapshot(s=>{const d=s.exists?s.data():null;S.admin=d?{carry:typeof d.carry==="number"?d.carry:null,cogs:Object.assign({},d.cogs||{}),updatedAt:d.updatedAt}:{carry:null,cogs:{}};
-    if(!s.metadata.fromCache)done("admin");refreshAll();},fail);
-  db.collection("users").onSnapshot(qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data();});S.users=o;if(!qs.metadata.fromCache){S.usersLoaded=true;done("users");}refreshAll();},fail);
-  db.collection("audit").orderBy("at","desc").limit(500).onSnapshot(qs=>{S.audit=qs.docs.map(d=>Object.assign({id:d.id},d.data()));if(S.view==="history")renderHistory();},()=>{});
-  refreshAll();
+  if(db){
+    S.db=db;S.mode="db";
+    if(user){const [ce,cw]=await Promise.all([user.canEdit(),user.can("data.write")]);S.canAdmin=!!ce;S.readonlyMonths=cw===false;}
+    setConn("กำลังโหลดข้อมูล…");
+    const need=new Set(["months","admin","users"]);
+    const timer=setTimeout(()=>{if(need.size)setConn("ยังโหลดข้อมูลไม่ได้ ข้อมูลที่เห็นอาจยังไม่ล่าสุด",true);},10000);
+    const done=n=>{if(need.delete(n)&&!need.size){clearTimeout(timer);setConn("เชื่อมต่อแล้ว · ข้อมูลแชร์ร่วมกันทุกคน");}};
+    const fail=err=>{clearTimeout(timer);setConn("เชื่อมต่อฐานข้อมูลไม่ได้ ("+err.code+")",true);};
+    db.collection("months").onSnapshot(qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data();});S.months=o;if(!qs.metadata.fromCache)done("months");refreshAll();},fail);
+    db.doc("admin/inventory").onSnapshot(s=>{const d=s.exists?s.data():null;S.admin=d?{carry:typeof d.carry==="number"?d.carry:null,cogs:Object.assign({},d.cogs||{}),updatedAt:d.updatedAt}:{carry:null,cogs:{}};
+      if(!s.metadata.fromCache)done("admin");refreshAll();},fail);
+    db.collection("users").onSnapshot(qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data();});S.users=o;if(!qs.metadata.fromCache){S.usersLoaded=true;done("users");}refreshAll();},fail);
+    db.collection("audit").orderBy("at","desc").limit(500).onSnapshot(qs=>{S.audit=qs.docs.map(d=>Object.assign({id:d.id},d.data()));if(S.view==="history")renderHistory();},()=>{});
+    refreshAll();
+    return;
+  }
+
+  // Check Neon backend API
+  try{
+    const stRes=await fetch("/api/status");
+    if(stRes.ok){
+      const st=await stRes.json();
+      if(st.mode==="neon"){
+        S.mode="neon";S.canAdmin=true;
+        setConn("กำลังโหลดข้อมูลจาก Neon Postgres…");
+        const dRes=await fetch("/api/data");
+        if(dRes.ok){
+          const d=await dRes.json();
+          S.months=d.months||{};
+          S.admin=d.admin||{carry:null,cogs:{}};
+          if(!S.admin.cogs)S.admin.cogs={};
+          S.users=d.users||{};
+          S.audit=d.audit||[];
+          S.usersLoaded=true;
+          setConn("เชื่อมต่อกับ Neon Postgres (Branch: "+(st.branch||"production")+") · ข้อมูลแชร์ร่วมกันทุกคน");
+          restoreSession();
+          refreshAll();
+          return;
+        }
+      }
+    }
+  }catch(err){}
+
+  // Fallback to local mode
+  S.mode="local";localLoad();S.usersLoaded=true;S.canAdmin=true;
+  setConn("โหมดในเครื่อง: ข้อมูลบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น ยังไม่แชร์กับผู้อื่น",true);restoreSession();renderShell();
 }
 boot();
 })();

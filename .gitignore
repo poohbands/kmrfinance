@@ -5,6 +5,7 @@
 
 # Node
 node_modules/
+public/
 
 # ไฟล์ Excel ชั่วคราว และไฟล์ข้อมูลจริง
 ~$*
@@ -13,3 +14,7 @@ node_modules/
 # ระบบปฏิบัติการ
 .DS_Store
 Thumbs.db
+.neon
+
+.vercel
+.env*
