@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>แบบฟอร์มกรอกข้อมูล ปีงบประมาณ 2570 – กมลาศรม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#F3F6F1; --surface:#FFFFFF; --ink:#1C2A20; --muted:#5B6B5F; --line:#D3DCD0;
+  --herb:#2E5B3A; --herb-ink:#FFFFFF; --herb-soft:#E3EDE2;
+  --staff:#FFF5D6; --staff-line:#E5C86A; --admin:#E2EDF8; --admin-line:#8DB0D6; --admin-ink:#1F4E79;
+  --good:#2E7D4A; --bad:#B3261E; --warn:#9A6400;
+  --shadow:0 1px 0 rgba(28,42,32,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111813; --surface:#19231C; --ink:#E4ECE3; --muted:#9AAB9D; --line:#2E3B31;
+    --herb:#86C597; --herb-ink:#0F1A12; --herb-soft:#22332636;
+    --staff:#2E2A17; --staff-line:#7A6728; --admin:#18293A; --admin-line:#355C82; --admin-ink:#A9CBEE;
+    --good:#7FD39A; --bad:#FF8A80; --warn:#E5B85C; --shadow:none;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111813; --surface:#19231C; --ink:#E4ECE3; --muted:#9AAB9D; --line:#2E3B31;
+  --herb:#86C597; --herb-ink:#0F1A12; --herb-soft:#22332636;
+  --staff:#2E2A17; --staff-line:#7A6728; --admin:#18293A; --admin-line:#355C82; --admin-ink:#A9CBEE;
+  --good:#7FD39A; --bad:#FF8A80; --warn:#E5B85C; --shadow:none;
+  color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Sarabun","Thonburi","Leelawadee UI","Tahoma",sans-serif;font-size:17px;line-height:1.55}
+.num{font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--herb);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 20px 120px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-bottom:14px;border-bottom:2px solid var(--herb)}
+header.top h1{margin:0;font-size:1.6rem;font-weight:700;line-height:1.25}
+header.top p{margin:2px 0 0;color:var(--muted);font-size:.98rem}
+.fy{font-size:2.6rem;font-weight:700;color:var(--herb);line-height:1;letter-spacing:-.01em}
+.fy small{display:block;font-size:.95rem;font-weight:500;color:var(--muted);letter-spacing:0;text-align:right}
+.conn{font-size:.9rem;color:var(--muted);margin-top:10px}
+.conn.warn{color:var(--warn)}
+
+nav.tabs{display:flex;gap:4px;margin:18px 0 0;overflow-x:auto}
+nav.tabs a{padding:9px 18px;border-radius:10px 10px 0 0;text-decoration:none;color:var(--muted);font-weight:600;border:1px solid transparent;border-bottom:none;white-space:nowrap}
+nav.tabs a[aria-current="page"]{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:0 12px 12px 12px;padding:22px;box-shadow:var(--shadow)}
+
+.strip{display:grid;grid-template-columns:repeat(12,minmax(74px,1fr));gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:22px}
+.strip button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 6px 7px;cursor:pointer;text-align:center;min-width:74px}
+.strip button b{display:block;font-size:1.02rem}
+.strip button span{display:block;font-size:.78rem;color:var(--muted)}
+.strip button .pips{display:flex;justify-content:center;gap:5px;margin-top:4px}
+.pip{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line)}
+.pip.staff.on{background:var(--staff-line);border-color:var(--staff-line)}
+.pip.admin.on{background:var(--admin-line);border-color:var(--admin-line)}
+.strip button[aria-pressed="true"]{background:var(--herb);border-color:var(--herb);color:var(--herb-ink)}
+.strip button[aria-pressed="true"] span{color:var(--herb-ink);opacity:.85}
+.strip button.dirty b::after{content:" •";color:var(--warn)}
+.strip button[aria-pressed="true"].dirty b::after{color:var(--herb-ink)}
+
+.monthhead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;margin-bottom:14px}
+.monthhead h2{margin:0;font-size:1.45rem}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.9rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid}
+.legend .ls{background:var(--staff);border-color:var(--staff-line)}
+.legend .la{background:var(--admin);border-color:var(--admin-line)}
+
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.side h3{margin:0 0 8px;font-size:1.2rem;padding-bottom:6px;border-bottom:1px solid var(--line)}
+fieldset{border:none;margin:0 0 18px;padding:0}
+legend{font-weight:700;color:var(--herb);margin-bottom:6px;padding:0;font-size:1rem}
+.row{display:grid;grid-template-columns:1fr 190px;gap:6px 12px;align-items:center;padding:5px 0}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+.row label{font-size:.98rem;line-height:1.35}
+.row .hint{display:block;font-size:.82rem;color:var(--muted)}
+.cell{position:relative}
+.cell input{width:100%;text-align:right;padding:8px 10px;border:1px solid var(--staff-line);background:var(--staff);border-radius:8px;font-variant-numeric:tabular-nums}
+.cell input:disabled{opacity:.65;cursor:not-allowed}
+.cell input.bad{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+.cell .echo{display:block;text-align:right;font-size:.8rem;color:var(--muted);min-height:0}
+.cell .echo.bad{color:var(--bad)}
+.calc{display:grid;grid-template-columns:1fr 190px;gap:12px;padding:6px 0;font-weight:600;border-top:1px dashed var(--line);margin-top:4px}
+@media (max-width:520px){.calc{grid-template-columns:1fr auto}}
+.calc .v{text-align:right;font-variant-numeric:tabular-nums}
+.sub{font-weight:400;color:var(--muted);font-size:.92rem}
+.calc.sub{border-top:none;margin-top:0;padding:2px 0}
+.adminbox{background:var(--admin);border:1px solid var(--admin-line);border-radius:8px;padding:8px 10px;color:var(--admin-ink)}
+.adminbox .v{font-weight:700}
+.adminbox .note{display:block;font-size:.82rem;font-weight:400}
+.big{font-size:1.08rem}
+
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--herb);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:20}
+.bar .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 26px}
+.bar .k{font-size:.8rem;color:var(--muted);display:block;line-height:1.2}
+.bar .n{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums}
+.bar .n.neg{color:var(--bad)}
+.bar .act{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--herb);background:var(--herb);color:var(--herb-ink);padding:9px 18px;border-radius:9px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--herb)}
+.msg{font-size:.88rem;color:var(--muted)}
+.msg.err{color:var(--bad)}
+
+table.t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+table.t th,table.t td{border:1px solid var(--line);padding:7px 10px}
+table.t th{background:var(--herb-soft);font-weight:700;text-align:center;line-height:1.3;font-size:.95rem}
+table.t td.r{text-align:right}
+table.t td.c{text-align:center}
+table.t tr.tot td{font-weight:700;background:var(--herb-soft)}
+table.t td.neg{color:var(--bad)}
+table.t td.inp{background:var(--admin);padding:3px}
+table.t td.inp input{width:100%;min-width:130px;border:1px solid var(--admin-line);background:transparent;border-radius:6px;padding:6px 8px;text-align:right;color:var(--admin-ink);font-weight:600}
+table.t td.inp input.bad{border-color:var(--bad)}
+.st-ok{color:var(--good)} .st-bad{color:var(--bad);font-weight:700} .st-wait{color:var(--muted)}
+
+.carry{display:grid;grid-template-columns:1fr minmax(200px,280px);gap:14px 24px;align-items:center;background:var(--admin);border:1px solid var(--admin-line);border-radius:12px;padding:16px 18px;margin-bottom:20px;color:var(--admin-ink)}
+@media (max-width:640px){.carry{grid-template-columns:1fr}}
+.carry h3{margin:0;font-size:1.2rem}
+.carry p{margin:2px 0 0;font-size:.9rem}
+.carry input{width:100%;font-size:1.35rem;font-weight:700;text-align:right;padding:10px 12px;border:1.5px solid var(--admin-line);border-radius:9px;background:var(--surface);color:var(--admin-ink)}
+.notice{border-left:4px solid var(--warn);background:var(--surface);padding:10px 14px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95rem}
+.ref{font-size:.88rem;color:var(--muted);margin-top:12px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.toolbar h2{margin:0;font-size:1.35rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 18px;border-radius:9px;font-weight:600;z-index:30;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.login{display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:end;border:1.5px solid var(--admin-line);border-radius:12px;padding:16px 18px;margin-bottom:20px}
+@media (max-width:760px){.login{grid-template-columns:1fr}}
+.login h3{margin:0;font-size:1.2rem;color:var(--admin-ink)}
+.login p{margin:2px 0 0;font-size:.9rem;color:var(--muted)}
+.login .lf{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.login label{display:flex;flex-direction:column;font-size:.88rem;color:var(--muted);gap:3px}
+.login input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:170px}
+.login .msg{grid-column:1/-1}
+[hidden]{display:none!important}
+
+.userchip{display:flex;align-items:center;gap:10px;font-size:.92rem;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.userchip b{color:var(--ink)}
+.badge{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.8rem;font-weight:700;border:1px solid}
+.badge.admin{background:var(--admin);border-color:var(--admin-line);color:var(--admin-ink)}
+.badge.staff{background:var(--staff);border-color:var(--staff-line);color:var(--ink)}
+.badge.viewer{background:var(--bg);border-color:var(--line);color:var(--muted)}
+.badge.off{background:transparent;border-color:var(--bad);color:var(--bad)}
+.linkbtn{background:none;border:none;color:var(--herb);font-weight:700;cursor:pointer;padding:2px 4px;text-decoration:underline}
+.gate{max-width:440px;margin:48px auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 26px 22px;box-shadow:var(--shadow)}
+.gate h2{margin:0 0 4px;font-size:1.4rem}
+.gate p{margin:0 0 16px;color:var(--muted);font-size:.95rem}
+.gate label,.uf label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted);margin-bottom:12px}
+.gate input,.uf input,.uf select,.reason input,.admnote input{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:1rem}
+.gate .btn{width:100%;margin-top:4px}
+.uf{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 14px;align-items:end;border:1.5px solid var(--admin-line);border-radius:12px;padding:16px 18px 6px;margin-bottom:18px}
+.uf h3{grid-column:1/-1;margin:0 0 8px;font-size:1.15rem;color:var(--admin-ink)}
+.uf .acts{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.uf .chk{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 18px;font-size:.9rem}
+.roles div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--muted)}
+.roles b{display:block;color:var(--ink);margin-bottom:2px}
+table.t td .linkbtn{font-size:.92rem}
+table.t td.l{text-align:left}
+.danger{color:var(--bad)!important}
+.reason{border:1.5px solid var(--admin-line);background:var(--admin);color:var(--admin-ink);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.reason label{display:flex;flex-direction:column;gap:5px;font-size:.92rem;margin-top:8px}
+.reason input{width:100%;background:var(--surface)}
+.notice.lock{border-left-color:var(--herb)}
+.admnote{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted);margin:14px 0 4px;max-width:640px}
+.chg{font-size:.88rem;line-height:1.45}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filters select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.btn.warnbtn{background:var(--warn);border-color:var(--warn);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>แบบฟอร์มรายงานผลการดำเนินงาน</h1>
+      <p>ศูนย์ส่งเสริมสุขภาพแผนไทย “กมลาศรม” สำนักงานสาธารณสุขจังหวัดพิษณุโลก</p>
+    </div>
+    <div class="fy">2570<small>ปีงบประมาณ (ต.ค. 69 – ก.ย. 70)</small></div>
+  </header>
+  <div class="conn" id="conn">กำลังเชื่อมต่อฐานข้อมูล…</div>
+  <div class="userchip" id="userchip" hidden></div>
+
+  <section id="gate" class="gate" hidden>
+    <h2>เข้าสู่ระบบ</h2>
+    <p>ใช้ชื่อผู้ใช้และรหัสผ่านที่ได้รับจาก Admin</p>
+    <form id="loginForm" autocomplete="on">
+      <label>ชื่อผู้ใช้<input id="loginUser" autocomplete="username" autocapitalize="off" spellcheck="false" required></label>
+      <label>รหัสผ่าน<input id="loginPass" type="password" autocomplete="current-password" required></label>
+      <button class="btn" type="submit">เข้าสู่ระบบ</button>
+      <p class="msg" id="loginMsg" role="alert" style="margin:10px 0 0"></p>
+    </form>
+  </section>
+
+  <div id="app" hidden>
+    <nav class="tabs" aria-label="ส่วนของแบบฟอร์ม">
+      <a href="#form" data-view="form">กรอกข้อมูลรายเดือน</a>
+      <a href="#admin" data-view="admin">ยอดยกมาและต้นทุนยา</a>
+      <a href="#users" data-view="users" data-adminonly>ผู้ใช้งาน</a>
+      <a href="#history" data-view="history" data-adminonly>ประวัติการแก้ไข</a>
+      <a href="#summary" data-view="summary">สรุปทั้งปี</a>
+    </nav>
+
+    <section class="panel" id="v-form">
+      <div class="strip" id="strip" role="group" aria-label="เลือกเดือน"></div>
+      <div class="monthhead">
+        <h2 id="mtitle"></h2>
+        <div class="legend"><span><i class="ls"></i>เจ้าหน้าที่กรอก</span><span><i class="la"></i>Admin กรอก (ดึงมาอัตโนมัติ)</span><span>พิมพ์สูตรได้ เช่น 650*6+390*4</span></div>
+      </div>
+      <div id="formNotice"></div>
+      <div class="cols">
+        <div class="side" id="revSide"></div>
+        <div class="side" id="expSide"></div>
+      </div>
+    </section>
+    <section class="panel" id="v-admin" hidden></section>
+    <section class="panel" id="v-users" hidden></section>
+    <section class="panel" id="v-history" hidden></section>
+    <section class="panel" id="v-summary" hidden></section>
+  </div>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <div class="in">
+    <div><span class="k">รายรับเดือนนี้</span><span class="n" data-o="rev">0.00</span></div>
+    <div><span class="k">รายจ่ายเดือนนี้</span><span class="n" data-o="exp">0.00</span></div>
+    <div><span class="k">กำไรสุทธิเดือนนี้</span><span class="n" data-o="net">0.00</span></div>
+    <div><span class="k">กำไรสะสมตั้งแต่ต้นปี</span><span class="n" data-o="cumNet">0.00</span></div>
+    <div class="act"><span class="msg" id="saveMsg"></span><span id="barAct" style="display:flex;gap:8px;flex-wrap:wrap"></span></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+const MONTHS=[
+ ["2569-10","ต.ค.69","ตุลาคม 2569"],["2569-11","พ.ย.69","พฤศจิกายน 2569"],["2569-12","ธ.ค.69","ธันวาคม 2569"],
+ ["2570-01","ม.ค.70","มกราคม 2570"],["2570-02","ก.พ.70","กุมภาพันธ์ 2570"],["2570-03","มี.ค.70","มีนาคม 2570"],
+ ["2570-04","เม.ย.70","เมษายน 2570"],["2570-05","พ.ค.70","พฤษภาคม 2570"],["2570-06","มิ.ย.70","มิถุนายน 2570"],
+ ["2570-07","ก.ค.70","กรกฎาคม 2570"],["2570-08","ส.ค.70","สิงหาคม 2570"],["2570-09","ก.ย.70","กันยายน 2570"]
+].map(([key,short,full])=>({key,short,full}));
+const MSHORT=Object.fromEntries(MONTHS.map(m=>[m.key,m.short]));
+const COGS_LABEL="ต้นทุนค่ายาสมุนไพรจากการขายยาสมุนไพร ณ เดือนปัจจุบัน";
+// บัญชี Admin หลัก: เปลี่ยนรหัสผ่านได้ตามวิธีใน README.md
+const ADMIN_SALT="5bcae3b029495973f867037bcda5458f";
+const ADMIN_HASH="339e8008a13dc9c59bcdfc211ca9ef2881a18b034f99c14347d38cff6be215ca";
+const ROLES={admin:"Admin",staff:"เจ้าหน้าที่",viewer:"ผู้ดูรายงาน"};
+const PBKDF2_ITER=100000;
+const REV=[
+ {title:"รายได้จากการบริการ (หัตถการทางการแพทย์แผนไทยฯ)",items:[
+   ["r1","1. ค่าบริการนวดประคบเพื่อรักษา"],["r2","2. ค่าบริการอบไอน้ำสมุนไพร"],["r3","3. ค่าบริการดูแลมารดาหลังคลอด"]],
+  calcs:[["รวมรายรับจากการให้บริการไม่หักทุน (หัตถการ)","revProc"],["กำไรรวมจากการให้บริการ (หัตถการ)","profProc",1]]},
+ {title:"รายได้จากการบริการ (ยาสมุนไพร)",items:[
+   ["r4","4. มูลค่าจำหน่ายยาสมุนไพรสำเร็จรูป"],["r5","5. มูลค่าจำหน่ายยาปรุงเฉพาะรายสมุนไพร"]],
+  calcs:[["รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)","revHerb"],["กำไรรวมจากการให้บริการ (ยาสมุนไพร)","profHerb",1]]}
+];
+const EXP=[
+ {title:"รายจ่ายประจำเดือน",items:[
+   ["e1","1. ค่าจ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน)","เช่น 14268+8937"],["e2","2. ค่าถ่ายเอกสาร"],["e3","3. ค่าวัสดุครุภัณฑ์ให้บริการอื่นๆ"]],
+  calcs:[["รวมต้นทุนการจัดบริการอื่นๆ","other"]]},
+ {title:"รายจ่ายจากบริการยาสมุนไพร",items:[
+   ["e4","4. ค่ายาสมุนไพรจาก รพ.บางกระทุ่ม-รพ.บ้านตาก"],["e5","5. ค่ายาบริษัทบางกอกดรัก (ไพลวาน่า)"],["e6","6. ค่ายาองค์การเภสัช (ยาอมมะแว้ง)"],["e7","7. ค่ายาอภัยภูเบศร (สเปรย์กระดูกไก่ดำ)"]],
+  calcs:[["ค่ายาสมุนไพรที่ซื้อในเดือนนี้","purchase",1]],admin:true,after:[["e8","8. ต้นทุนค่ายาปรุงเฉพาะรายสมุนไพร"]]},
+ {title:"รายจ่ายจากบริการด้านหัตถการ",items:[
+   ["e9","9. ค่าจ้างผู้ช่วยแพทย์แผนไทย"],["e10","10. ต้นทุนบริการอบสมุนไพร"],["e11","11. ต้นทุนบริการการดูแลมารดาหลังคลอด"]],
+  calcs:[["รวมค่าใช้จ่าย","proc"]]},
+ {title:"ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ",items:[
+   ["e12","12. ค่า OT เจ้าหน้าที่ (วันจันทร์ - ศุกร์)"],["e13","13. ค่า OT จ้างเหมาบริการ (วันจันทร์ - ศุกร์)"],
+   ["e14","14. ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)"],
+   ["e15","15. ค่า OT จ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน เสาร์-อาทิตย์)","เช่น 650*6+390*4"],
+   ["e16","16. ค่า OT พนักงานทำความสะอาด","เช่น 450*8"]],
+  calcs:[["รวมค่าใช้จ่าย","ot"]]}
+];
+const FIELDS=[],LABEL={};
+REV.concat(EXP).forEach(g=>{g.items.concat(g.after||[]).forEach(i=>{FIELDS.push(i[0]);LABEL[i[0]]=(g.title.indexOf("รายได้")===0?"รายรับ ":"รายจ่าย ")+i[1];});});
+
+const S={view:"form",cur:MONTHS[0].key,months:{},admin:{carry:null,cogs:{}},drafts:{},adminDraft:null,adminNote:"",
+  users:{},usersLoaded:false,audit:[],session:null,reason:"",confirm:null,histMonth:"",userForm:null,
+  mode:"loading",standalone:false,canAdmin:false,readonlyMonths:false,db:null,downloads:null,saving:false};
+
+// ---------- utils ----------
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>(Number.isFinite(n)?n:0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const when=iso=>iso?new Date(iso).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}):"";
+function evalExpr(raw){
+  const s=String(raw==null?"":raw).replace(/[,\s]/g,"").replace(/×/g,"*").replace(/÷/g,"/");
+  if(s==="")return {ok:true,value:null};
+  if(!/^[0-9.+\-*/()]+$/.test(s))return {ok:false};
+  let i=0;const peek=()=>s[i];
+  function num(){const m=/^\d*\.?\d+|^\d+\.?/.exec(s.slice(i));if(!m)throw 0;i+=m[0].length;return parseFloat(m[0]);}
+  function factor(){if(peek()==="-"){i++;return -factor();}if(peek()==="+"){i++;return factor();}
+    if(peek()==="("){i++;const v=expr();if(peek()!==")")throw 0;i++;return v;}return num();}
+  function term(){let v=factor();while(peek()==="*"||peek()==="/"){const o=s[i++];const r=factor();v=o==="*"?v*r:v/r;}return v;}
+  function expr(){let v=term();while(peek()==="+"||peek()==="-"){const o=s[i++];const r=term();v=o==="+"?v+r:v-r;}return v;}
+  try{const v=expr();if(i!==s.length||!Number.isFinite(v))return {ok:false};return {ok:true,value:Math.round(v*100)/100,isExpr:/[+\-*/()]/.test(s.replace(/^-/,""))};}
+  catch(e){return {ok:false};}
+}
+const hex=buf=>Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,"0")).join("");
+const unhex=h=>new Uint8Array((h.match(/../g)||[]).map(x=>parseInt(x,16)));
+async function sha256hex(t){return hex(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)));}
+async function pbkdf2(pass,saltHex,iter){const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({name:"PBKDF2",salt:unhex(saltHex),iterations:iter,hash:"SHA-256"},k,256));}
+let toastT;function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);}
+function ssGet(k){try{return sessionStorage.getItem(k);}catch(e){return null;}}
+function ssSet(k,v){try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v);}catch(e){}}
+
+// ---------- roles ----------
+const role=()=>S.session?S.session.role:null;
+const isAdmin=()=>role()==="admin";
+const nameOf=u=>u==="admin"?"ผู้ดูแลระบบหลัก":(S.users[u]&&S.users[u].name)||u||"-";
+const statusOf=k=>{const m=S.months[k];return m?(m.status||"draft"):null;};
+function canEditMonth(k){if(S.mode==="loading"||S.readonlyMonths||!S.session)return false;if(isAdmin())return true;return role()==="staff"&&statusOf(k)!=="submitted";}
+function armed(a){const c=S.confirm;return c&&c.a===a&&c.k===S.cur&&Date.now()-c.t<6000;}
+
+// ---------- month data ----------
+function savedExprs(key){const m=S.months[key];if(!m)return {};const x=m.x||{},v=m.v||{},o={};FIELDS.forEach(f=>{if(x[f]!=null&&x[f]!=="")o[f]=x[f];else if(v[f]!=null)o[f]=fmt(v[f]);});return o;}
+function exprsFor(key){return S.drafts[key]||savedExprs(key);}
+function valuesFor(key){const e=exprsFor(key),o={};FIELDS.forEach(f=>{const r=evalExpr(e[f]);o[f]=r.ok&&r.value!=null?r.value:0;});return o;}
+function isDirty(key){const d=S.drafts[key];if(!d)return false;const s=savedExprs(key);return FIELDS.some(f=>(d[f]||"")!==(s[f]||""));}
+function adminState(){return S.adminDraft||{carry:S.admin.carry==null?"":fmt(S.admin.carry),cogs:Object.fromEntries(MONTHS.map(m=>[m.key,S.admin.cogs[m.key]==null?"":fmt(S.admin.cogs[m.key])]))};}
+function cogsSaved(key){const v=S.admin.cogs[key];return typeof v==="number"?v:null;}
+function cogsUse(key,useDraft){if(useDraft&&S.adminDraft){const r=evalExpr(S.adminDraft.cogs[key]);return r.ok&&r.value!=null?r.value:null;}return cogsSaved(key);}
+function carryUse(useDraft){if(useDraft&&S.adminDraft){const r=evalExpr(S.adminDraft.carry);return r.ok?r.value:null;}return typeof S.admin.carry==="number"?S.admin.carry:null;}
+function compute(key,useAdminDraft){
+  const v=valuesFor(key),cogs=cogsUse(key,useAdminDraft)||0,c=Object.assign({},v,{cogs});
+  c.other=v.e1+v.e2+v.e3;c.purchase=v.e4+v.e5+v.e6+v.e7;c.proc=v.e9+v.e10+v.e11;c.ot=v.e12+v.e13+v.e14+v.e15+v.e16;
+  c.p1=v.r1-v.e9;c.p2=v.r2-v.e10;c.p3=v.r3-v.e11;c.p4=v.r4-cogs;c.p5=v.r5-v.e8;
+  c.revProc=v.r1+v.r2+v.r3;c.profProc=c.p1+c.p2+c.p3;c.revHerb=v.r4+v.r5;c.profHerb=c.p4+c.p5;
+  c.rev=c.revProc+c.revHerb;c.exp=c.other+cogs+v.e8+c.proc+c.ot;c.net=c.rev-c.exp;return c;
+}
+function cumulative(key,field,useAdminDraft){let t=0;for(const m of MONTHS){t+=compute(m.key,useAdminDraft)[field];if(m.key===key)break;}return t;}
+function inventory(useDraft){
+  const carry=carryUse(useDraft);let prev=carry==null?0:carry;
+  return MONTHS.map((m,i)=>{const begin=i===0?(carry==null?0:carry):prev;const c=compute(m.key,useDraft);const cg=cogsUse(m.key,useDraft);const end=begin+c.purchase-(cg||0);prev=end;
+    return {key:m.key,begin,purchase:c.purchase,cogs:cg,end,carryMissing:i===0&&carry==null};});
+}
+
+// ---------- persistence ----------
+const LS="kamalasrom-fy2570-v1";
+function localLoad(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");S.months=o.months||{};S.admin=o.admin||{carry:null,cogs:{}};if(!S.admin.cogs)S.admin.cogs={};S.users=o.users||{};S.audit=o.audit||[];}catch(e){}}
+function localSave(){try{localStorage.setItem(LS,JSON.stringify({months:S.months,admin:S.admin,users:S.users,audit:S.audit.slice(0,500)}));return true;}catch(e){return false;}}
+async function persistMonth(key,doc){if(S.mode==="db"){await S.db.collection("months").doc(key).set(doc);}S.months[key]=doc;if(S.mode!=="db"&&!localSave())throw {code:"local"};}
+async function persistAdmin(doc){if(S.mode==="db"){await S.db.doc("admin/inventory").set(doc);}S.admin=doc;if(S.mode!=="db"&&!localSave())throw {code:"local"};}
+async function persistUser(u,doc){if(S.mode==="db"){await S.db.collection("users").doc(u).set(doc);}S.users[u]=doc;if(S.mode!=="db"&&!localSave())throw {code:"local"};}
+async function removeUser(u){if(S.mode==="db"){await S.db.collection("users").doc(u).delete();}delete S.users[u];if(S.mode!=="db")localSave();}
+async function logAudit(e){
+  const entry=Object.assign({at:new Date().toISOString(),by:S.session.u,byName:S.session.name},e);
+  const id=Date.now()+"-"+Math.random().toString(36).slice(2,8);
+  try{if(S.mode==="db")await S.db.collection("audit").doc(id).set(entry);else{S.audit.unshift(Object.assign({id},entry));localSave();}}catch(err){}
+}
+function errText(e,fallback){const c=e&&e.code;
+  if(c==="invalid_argument")return "บัญชี claude.ai นี้ไม่มีสิทธิ์บันทึกส่วนนี้ (ต้องมีสิทธิ์ Editor)";
+  if(c==="quota_exceeded")return "พื้นที่เก็บข้อมูลเต็ม แจ้งเจ้าของแบบฟอร์ม";return fallback||"บันทึกไม่สำเร็จ ลองอีกครั้ง";}
+
+// ---------- session ----------
+function startSession(sess){S.session=sess;ssSet("fy2570-session",sess.u);S.drafts={};S.adminDraft=null;S.reason="";renderShell();}
+function endSession(msg){S.session=null;ssSet("fy2570-session",null);S.drafts={};S.adminDraft=null;S.userForm=null;renderShell();if(msg){const m=$("#loginMsg");m.className="msg err";m.textContent=msg;}}
+function syncSession(){
+  if(!S.session||S.session.builtin||!S.usersLoaded)return;
+  const d=S.users[S.session.u];
+  if(!d||d.active===false){endSession("บัญชีนี้ถูกลบหรือระงับการใช้งานแล้ว");return;}
+  if(d.role!==S.session.role||d.name!==S.session.name){S.session.role=d.role;S.session.name=d.name;renderShell();}
+}
+function restoreSession(){
+  const u=ssGet("fy2570-session");if(!u||S.session)return;
+  if(u==="admin"){S.session={u:"admin",name:nameOf("admin"),role:"admin",builtin:true};return;}
+  if(S.usersLoaded){const d=S.users[u];if(d&&d.active!==false)S.session={u,name:d.name,role:d.role};else ssSet("fy2570-session",null);}
+}
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();const msg=$("#loginMsg");msg.className="msg";msg.textContent="";
+  const u=$("#loginUser").value.trim().toLowerCase(),p=$("#loginPass").value;
+  const fail=t=>{msg.className="msg err";msg.textContent=t||"ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";$("#loginPass").value="";$("#loginPass").focus();};
+  try{
+    if(u==="admin"){if(await pbkdf2(p,ADMIN_SALT,PBKDF2_ITER)===ADMIN_HASH){$("#loginPass").value="";startSession({u:"admin",name:nameOf("admin"),role:"admin",builtin:true});toast("เข้าสู่ระบบแล้ว");}else fail();return;}
+    if(!S.usersLoaded){fail("กำลังโหลดรายชื่อผู้ใช้ ลองอีกครั้งสักครู่");return;}
+    const d=S.users[u];if(!d){fail();return;}
+    if(d.active===false){fail("บัญชีนี้ถูกระงับการใช้งาน ติดต่อ Admin");return;}
+    if(await pbkdf2(p,d.salt,d.iter||PBKDF2_ITER)!==d.hash){fail();return;}
+    $("#loginPass").value="";startSession({u,name:d.name,role:d.role});toast("เข้าสู่ระบบแล้ว");
+  }catch(err){fail("เบราว์เซอร์นี้ตรวจรหัสผ่านไม่ได้");}
+});
+
+// ---------- shell ----------
+function renderShell(){
+  const on=!!S.session;
+  $("#gate").hidden=on;$("#app").hidden=!on;
+  const chip=$("#userchip");chip.hidden=!on;
+  if(on){chip.innerHTML=`ผู้ใช้: <b>${esc(S.session.name)}</b> <span class="badge ${S.session.role}">${esc(ROLES[S.session.role])}</span><button class="linkbtn" type="button" id="logoutBtn">ออกจากระบบ</button>`;}
+  document.querySelectorAll("[data-adminonly]").forEach(a=>a.hidden=!isAdmin());
+  if(on)showView(location.hash.slice(1)||S.view);else $("#bar").hidden=true;
+}
+function showView(v){
+  const ok=["form","admin","summary"].concat(isAdmin()?["users","history"]:[]);
+  if(!ok.includes(v))v="form";S.view=v;
+  document.querySelectorAll("nav.tabs a").forEach(a=>a.setAttribute("aria-current",a.dataset.view===v?"page":"false"));
+  ["form","admin","users","history","summary"].forEach(x=>$("#v-"+x).hidden=x!==v);
+  $("#bar").hidden=v!=="form"||!S.session;
+  if(v==="form"){renderStrip();renderForm();}if(v==="admin")renderAdmin();if(v==="users")renderUsers();if(v==="history")renderHistory();if(v==="summary")renderSummary();
+}
+window.addEventListener("hashchange",()=>{if(S.session)showView(location.hash.slice(1));});
+
+// ---------- monthly form ----------
+function stLabel(k){const s=statusOf(k);return s==="submitted"?"ส่งแล้ว":s==="draft"?"ร่าง":"ยังไม่กรอก";}
+function renderStrip(){
+  $("#strip").innerHTML=MONTHS.map(m=>{const s=statusOf(m.key),adm=cogsSaved(m.key)!=null;
+    return `<button type="button" data-k="${m.key}" aria-pressed="${m.key===S.cur}" class="${isDirty(m.key)?"dirty":""}" title="${esc(m.full)}">
+      <b>${esc(m.short)}</b><span>${stLabel(m.key)}</span>
+      <span class="pips"><i class="pip staff ${s==="submitted"?"on":""}" title="ส่งข้อมูลแล้ว"></i><i class="pip admin ${adm?"on":""}" title="ต้นทุนยาจาก Admin"></i></span></button>`;}).join("");
+}
+function inputRow(f,label,hint,ex){
+  const dis=canEditMonth(S.cur)?"":"disabled";
+  return `<div class="row"><label for="in-${f}">${esc(label)}${hint?`<span class="hint">${esc(hint)}</span>`:""}</label>
+   <div class="cell"><input id="in-${f}" data-f="${f}" inputmode="decimal" autocomplete="off" value="${esc(ex[f]||"")}" placeholder="0.00" ${dis}><span class="echo" data-echo="${f}"></span></div></div>`;
+}
+function calcRow(label,key,cls){return `<div class="calc ${cls?"sub":""}"><span>${esc(label)}</span><span class="v" data-o="${key}">0.00</span></div>`;}
+function renderForm(){
+  const m=MONTHS.find(x=>x.key===S.cur),ex=exprsFor(S.cur);
+  $("#mtitle").textContent="ประจำเดือน "+m.full;
+  let rev="<h3>รายการรายรับจากการบริการ</h3>";const pmap={r1:"p1",r2:"p2",r3:"p3",r4:"p4",r5:"p5"};
+  REV.forEach(g=>{rev+=`<fieldset><legend>${esc(g.title)}</legend>`;g.items.forEach(([f,l,h])=>{rev+=inputRow(f,l,h,ex);});
+    g.items.forEach(([f,l])=>{rev+=calcRow("กำไร: "+l.replace(/^\d+\.\s*/,""),pmap[f],1);});
+    g.calcs.forEach(([l,k,s])=>{rev+=calcRow(l,k,s);});rev+="</fieldset>";});
+  rev+=`<div class="calc big"><span>รวมรายรับทั้งหมด</span><span class="v" data-o="rev">0.00</span></div>`+calcRow("รวมรับตั้งแต่ต้นปี","cumRev",1);
+  let exp="<h3>รายการรายจ่าย</h3>";
+  EXP.forEach(g=>{exp+=`<fieldset><legend>${esc(g.title)}</legend>`;g.items.forEach(([f,l,h])=>{exp+=inputRow(f,l,h,ex);});
+    g.calcs.forEach(([l,k,s])=>{exp+=calcRow(l,k,s);});
+    if(g.admin)exp+=`<div class="row"><span>${esc(COGS_LABEL)}</span><div class="adminbox"><span class="v num" data-o="cogsShow">–</span><span class="note" data-o="cogsNote"></span></div></div>`;
+    (g.after||[]).forEach(([f,l,h])=>{exp+=inputRow(f,l,h,ex);});exp+="</fieldset>";});
+  exp+=`<div class="calc big"><span>รวมรายจ่ายทั้งหมด</span><span class="v" data-o="exp">0.00</span></div>`+calcRow("รวมจ่ายตั้งแต่ต้นปี","cumExp",1);
+  exp+=`<fieldset style="margin-top:18px"><legend>ยาสมุนไพรคงคลัง (ราคาทุน)</legend>
+    ${calcRow("ยอดยาคงคลังยกมา","invBegin",1)}${calcRow("บวก ค่ายาสมุนไพรที่ซื้อในเดือนนี้","invBuy",1)}
+    ${calcRow("หัก "+COGS_LABEL,"invCogs",1)}${calcRow("ยอดยาคงคลังคงเหลือยกไป","invEnd")}</fieldset>`;
+  $("#revSide").innerHTML=rev;$("#expSide").innerHTML=exp;
+  S.noticeSig=null;updateDerived();
+}
+function updateNotice(){
+  const k=S.cur,st=statusOf(k),m=S.months[k];
+  const sig=[role(),st,S.readonlyMonths,k,m&&m.submittedAt].join("|");if(sig===S.noticeSig)return;S.noticeSig=sig;
+  let h="";
+  if(role()==="viewer")h=`<div class="notice">บัญชีผู้ดูรายงาน ดูข้อมูลได้อย่างเดียว</div>`;
+  else if(S.readonlyMonths)h=`<div class="notice">บัญชี claude.ai นี้ดูข้อมูลได้อย่างเดียว ถ้าต้องกรอกข้อมูล ให้ขอสิทธิ์ Contributor จากเจ้าของแบบฟอร์ม</div>`;
+  else if(st==="submitted"&&!isAdmin())h=`<div class="notice lock">ส่งข้อมูลเดือนนี้แล้ว เมื่อ ${esc(when(m.submittedAt))} โดย ${esc(nameOf(m.submittedBy))} ข้อมูลถูกล็อก ถ้าพบข้อผิดพลาด แจ้ง Admin ให้แก้ไขหรือปลดล็อก</div>`;
+  else if(st==="submitted"&&isAdmin())h=`<div class="reason"><b>เดือนนี้ส่งข้อมูลแล้ว</b> เมื่อ ${esc(when(m.submittedAt))} โดย ${esc(nameOf(m.submittedBy))} · Admin แก้ไขได้ทันที หรือปลดล็อกให้เจ้าหน้าที่แก้เอง
+     <label>เหตุผลการแก้ไข (จำเป็นเมื่อแก้ตัวเลข)<input id="reasonIn" value="${esc(S.reason)}" placeholder="เช่น กรอกค่า OT ผิด ตามใบสำคัญจ่ายที่ถูกต้อง"></label></div>`;
+  $("#formNotice").innerHTML=h;
+}
+function setOut(k,v,neg){document.querySelectorAll(`[data-o="${k}"]`).forEach(el=>{el.textContent=typeof v==="number"?fmt(v):v;if(neg!==undefined)el.classList.toggle("neg",neg);});}
+function updateBar(){
+  const k=S.cur,dirty=isDirty(k),st=statusOf(k),busy=S.saving,act=$("#barAct");let h="";
+  if(dirty)h+=`<button class="btn ghost" type="button" id="bRevert">ยกเลิกการแก้ไข</button>`;
+  if(canEditMonth(k)){
+    if(isAdmin()){
+      h+=`<button class="btn" type="button" id="bAdminSave" ${dirty&&!busy?"":"disabled"}>บันทึกการแก้ไข</button>`;
+      if(st==="submitted")h+=`<button class="btn warnbtn" type="button" id="bUnlock" ${busy?"disabled":""}>${armed("unlock")?"กดอีกครั้งเพื่อยืนยัน":"ปลดล็อกให้เจ้าหน้าที่แก้ไข"}</button>`;
+      else h+=`<button class="btn ghost" type="button" id="bSubmit" ${busy?"disabled":""}>${armed("submit")?"กดอีกครั้งเพื่อยืนยันส่ง":"ส่งข้อมูลเดือนนี้"}</button>`;
+    }else{
+      h+=`<button class="btn ghost" type="button" id="bDraft" ${dirty&&!busy?"":"disabled"}>บันทึกร่าง</button>`;
+      h+=`<button class="btn" type="button" id="bSubmit" ${busy||(!dirty&&!S.months[k])?"disabled":""}>${armed("submit")?"กดอีกครั้งเพื่อยืนยันส่ง":"ส่งข้อมูลเดือนนี้"}</button>`;
+    }
+  }
+  if(act.innerHTML!==h)act.innerHTML=h;
+  const sm=$("#saveMsg");
+  if(!sm.classList.contains("err")){const m=S.months[k];
+    sm.textContent=dirty?"มีการแก้ไขที่ยังไม่บันทึก":(m&&m.updatedAt?"บันทึกล่าสุด "+when(m.updatedAt)+" โดย "+nameOf(m.updatedBy):(canEditMonth(k)?"":"ดูได้อย่างเดียว"));}
+}
+function updateDerived(){
+  const k=S.cur,c=compute(k),ex=exprsFor(k);
+  ["p1","p2","p3","p4","p5","revProc","profProc","revHerb","profHerb","other","purchase","proc","ot","rev","exp"].forEach(f=>setOut(f,c[f]));
+  setOut("net",c.net,c.net<0);setOut("cumRev",cumulative(k,"rev"));setOut("cumExp",cumulative(k,"exp"));
+  const cn=cumulative(k,"net");setOut("cumNet",cn,cn<0);
+  const cg=cogsSaved(k);setOut("cogsShow",cg==null?"รอ Admin กรอก":fmt(cg));
+  setOut("cogsNote",cg==null?"ยังไม่นับในรายจ่าย จนกว่า Admin จะกรอก":"Admin กรอกในแท็บยอดยกมาและต้นทุนยา");
+  const inv=inventory(false).find(x=>x.key===k);
+  setOut("invBegin",inv.carryMissing?"รอ Admin กรอกยอดยกมา":fmt(inv.begin));setOut("invBuy",inv.purchase);setOut("invCogs",inv.cogs==null?"รอ Admin กรอก":fmt(inv.cogs));setOut("invEnd",inv.end,inv.end<0);
+  FIELDS.forEach(f=>{const el=document.querySelector(`[data-echo="${f}"]`),inp=document.getElementById("in-"+f);if(!el||!inp)return;
+    const r=evalExpr(ex[f]);
+    if(!r.ok){el.textContent="สูตรหรือตัวเลขไม่ถูกต้อง";el.className="echo bad";inp.classList.add("bad");}
+    else if(r.value!=null&&r.value<0){el.textContent="ห้ามติดลบ";el.className="echo bad";inp.classList.add("bad");}
+    else{el.textContent=r.isExpr?"= "+fmt(r.value):"";el.className="echo";inp.classList.remove("bad");}});
+  const btn=document.querySelector(`#strip [data-k="${k}"]`);if(btn)btn.classList.toggle("dirty",isDirty(k));
+  updateNotice();updateBar();
+}
+function collect(k){const d=exprsFor(k),v={},x={};
+  for(const f of FIELDS){const raw=String(d[f]||"").trim(),r=evalExpr(raw);
+    if(!r.ok||(r.value!=null&&r.value<0))return {bad:f};
+    if(r.value!=null){v[f]=r.value;if(r.isExpr)x[f]=raw;}}
+  return {v,x};}
+function diffVals(a,b){const out=[];FIELDS.forEach(f=>{const p=a[f]==null?0:a[f],n=b[f]==null?0:b[f];if(p!==n)out.push({f,label:LABEL[f],from:p,to:n});});return out;}
+async function saveMonth(kind){
+  const k=S.cur,prev=S.months[k]||null,prevV=(prev&&prev.v)||{},msg=$("#saveMsg");msg.className="msg";
+  let v,x;
+  if(kind==="unlock"){v=prevV;x=(prev&&prev.x)||{};}
+  else{const r=collect(k);if(r.bad){msg.className="msg err";msg.textContent="แก้ช่องที่มีกรอบสีแดงก่อนบันทึก";document.getElementById("in-"+r.bad).focus();return;}v=r.v;x=r.x;}
+  const changes=diffVals(prevV,v),wasSub=prev&&prev.status==="submitted",reason=S.reason.trim();
+  if(kind==="admin"&&wasSub&&changes.length&&!reason){msg.className="msg err";msg.textContent="กรอกเหตุผลการแก้ไขก่อนบันทึก";const ri=$("#reasonIn");if(ri)ri.focus();return;}
+  const now=new Date().toISOString();
+  const status=kind==="submit"?"submitted":kind==="unlock"?"draft":kind==="admin"?((prev&&prev.status)||"draft"):"draft";
+  const doc={v,x,status,updatedAt:kind==="unlock"&&prev?prev.updatedAt:now,updatedBy:kind==="unlock"&&prev?prev.updatedBy:S.session.u,
+    submittedAt:status==="submitted"?(kind==="submit"?now:prev.submittedAt):null,submittedBy:status==="submitted"?(kind==="submit"?S.session.u:prev.submittedBy):null};
+  const action={draft:"บันทึกร่าง",submit:isAdmin()?"ส่งข้อมูล (โดย Admin)":"ส่งข้อมูล",admin:wasSub?"Admin แก้ไขข้อมูลที่ส่งแล้ว":"Admin บันทึกข้อมูล",unlock:"Admin ปลดล็อกให้เจ้าหน้าที่แก้ไข"}[kind];
+  S.saving=true;S.confirm=null;updateBar();msg.textContent="กำลังบันทึก…";
+  try{await persistMonth(k,doc);delete S.drafts[k];S.saving=false;msg.textContent="";
+    await logAudit({action,month:k,changes,reason:(kind==="admin"||kind==="unlock")?reason:""});
+    if(kind==="admin"||kind==="unlock")S.reason="";
+    renderStrip();renderForm();toast(action+" เดือน "+MSHORT[k]+" แล้ว");}
+  catch(e){S.saving=false;msg.className="msg err";msg.textContent=errText(e);if(e&&e.code==="invalid_argument"&&!isAdmin()){S.readonlyMonths=true;renderForm();}else updateBar();}
+}
+
+// ---------- admin: carry & cogs ----------
+function invStatus(r){if(r.carryMissing)return `<span class="st-wait">ยังไม่กรอกยอดยกมา</span>`;if(r.cogs==null)return `<span class="st-wait">ยังไม่กรอก</span>`;if(r.end<0)return `<span class="st-bad">คงคลังติดลบ ตรวจสอบ</span>`;return `<span class="st-ok">ปกติ</span>`;}
+function renderAdmin(){
+  const a=adminState(),inv=inventory(true),editable=isAdmin()&&S.canAdmin&&S.mode!=="loading",dis=editable?"":"disabled";
+  let h=`<div class="toolbar"><h2>ยอดยกมาและต้นทุนค่ายาสมุนไพร</h2>
+   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="msg" id="admMsg"></span>
+   ${editable?`<button class="btn ghost" type="button" id="admRevert" ${S.adminDraft?"":"hidden"}>ยกเลิกการแก้ไข</button>
+   <button class="btn" type="button" id="admSave" disabled>บันทึกข้อมูล Admin</button>`:""}</div></div>`;
+  if(!isAdmin())h+=`<div class="notice">ส่วนนี้ Admin เป็นผู้กรอก บัญชีของคุณดูได้อย่างเดียว</div>`;
+  else if(!S.canAdmin&&S.mode!=="loading")h+=`<div class="notice">บัญชี claude.ai ที่ใช้อยู่ต้องมีสิทธิ์ Editor จึงจะบันทึกส่วนนี้ได้</div>`;
+  h+=`<div class="carry"><div><h3>ยอดยกมา ณ ต้นเดือนตุลาคม 2569</h3>
+     <p>มูลค่าราคาทุนของยาสมุนไพรคงเหลือในคลังเล็ก ยกมาจากปีงบประมาณ 2569 กรอกครั้งเดียวต้นปี เดือนถัดไปยกมาอัตโนมัติ</p></div>
+     <div class="cell"><input id="carryIn" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(a.carry)}" aria-label="ยอดยกมา ณ ต้นเดือนตุลาคม 2569" ${dis}><span class="echo" id="carryEcho"></span></div></div>`;
+  h+=`<div class="tw"><table class="t"><thead><tr><th>เดือน</th><th>ยอดยาคงคลังยกมา</th><th>บวก ค่ายาสมุนไพร<br>ที่ซื้อในเดือนนี้</th><th>${esc(COGS_LABEL)}<br>(Admin กรอก)</th><th>ยอดยาคงคลัง<br>คงเหลือยกไป</th><th>สถานะ</th></tr></thead><tbody>`;
+  inv.forEach((r,i)=>{const m=MONTHS[i];
+    h+=`<tr data-row="${m.key}"><td class="c">${esc(m.short)}</td><td class="r" data-a="begin">${r.carryMissing?"–":fmt(r.begin)}</td><td class="r">${fmt(r.purchase)}</td>
+     <td class="inp"><input data-cogs="${m.key}" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(a.cogs[m.key]||"")}" aria-label="${esc(COGS_LABEL+" "+m.full)}" ${dis}></td>
+     <td class="r ${r.end<0?"neg":""}" data-a="end">${fmt(r.end)}</td><td class="c" data-a="st">${invStatus(r)}</td></tr>`;});
+  const tb=inv.reduce((s,r)=>s+r.purchase,0);
+  h+=`</tbody><tfoot><tr class="tot"><td class="c">รวมทั้งปี</td><td class="r" id="tBegin">${inv[0].carryMissing?"–":fmt(inv[0].begin)}</td><td class="r">${fmt(tb)}</td><td class="r" id="tCogs">0.00</td><td class="r" id="tEnd">0.00</td><td></td></tr></tfoot></table></div>`;
+  if(editable)h+=`<label class="admnote">หมายเหตุการแก้ไข (บันทึกลงประวัติ)<input id="admNoteIn" value="${esc(S.adminNote)}" placeholder="เช่น ปรับต้นทุนตามผลตรวจนับคลัง"></label>`;
+  h+=`<p class="ref">อ้างอิงปีงบ 2569 จากรายงานเดิม: ซื้อยาสมุนไพรทั้งปี 6,392,275.00 บาท และต้นทุนยาที่ขายทั้งปี 6,021,500.60 บาท · ยอดคงเหลือ ณ ก.ย.70 ใช้เป็นยอดยกมาของปีงบ 2571</p>`;
+  $("#v-admin").innerHTML=h;updateAdminDerived();
+}
+function updateAdminDerived(){
+  const a=adminState(),inv=inventory(true),ce=$("#carryEcho"),ci=$("#carryIn");
+  if(ce){const r=evalExpr(a.carry);const bad=!r.ok||(r.value!=null&&r.value<0);ce.textContent=bad?"ตัวเลขไม่ถูกต้อง":(r.isExpr?"= "+fmt(r.value):"");ce.className="echo"+(bad?" bad":"");ci.classList.toggle("bad",bad);}
+  inv.forEach((r,i)=>{const tr=document.querySelector(`[data-row="${MONTHS[i].key}"]`);if(!tr)return;
+    tr.querySelector('[data-a="begin"]').textContent=r.carryMissing?"–":fmt(r.begin);
+    const e=tr.querySelector('[data-a="end"]');e.textContent=fmt(r.end);e.classList.toggle("neg",r.end<0);
+    tr.querySelector('[data-a="st"]').innerHTML=invStatus(r);
+    const v=evalExpr(a.cogs[MONTHS[i].key]);tr.querySelector("input").classList.toggle("bad",!v.ok||(v.value!=null&&v.value<0));});
+  if($("#tCogs")){$("#tCogs").textContent=fmt(inv.reduce((s,r)=>s+(r.cogs||0),0));$("#tEnd").textContent=fmt(inv[11].end);$("#tBegin").textContent=inv[0].carryMissing?"–":fmt(inv[0].begin);}
+  const sb=$("#admSave"),rb=$("#admRevert");if(sb){sb.disabled=!S.adminDraft||S.saving;rb.hidden=!S.adminDraft;}
+}
+async function saveAdmin(){
+  const a=S.adminDraft;if(!a||!isAdmin())return;const msg=$("#admMsg");
+  const cr=evalExpr(a.carry);if(!cr.ok||(cr.value!=null&&cr.value<0)){msg.className="msg err";msg.textContent="ยอดยกมาไม่ถูกต้อง";return;}
+  const cogs={},changes=[];
+  for(const m of MONTHS){const r=evalExpr(a.cogs[m.key]);if(!r.ok||(r.value!=null&&r.value<0)){msg.className="msg err";msg.textContent="ต้นทุนเดือน "+m.short+" ไม่ถูกต้อง";return;}
+    if(r.value!=null)cogs[m.key]=r.value;const p=cogsSaved(m.key);if((p==null?null:p)!==(r.value==null?null:r.value))changes.push({f:"cogs",label:"ต้นทุนยาที่ขาย "+m.short,from:p||0,to:r.value||0});}
+  const pc=typeof S.admin.carry==="number"?S.admin.carry:null;if(pc!==(cr.value==null?null:cr.value))changes.unshift({f:"carry",label:"ยอดยกมา ณ ต้นเดือนตุลาคม 2569",from:pc||0,to:cr.value||0});
+  S.saving=true;updateAdminDerived();msg.className="msg";msg.textContent="กำลังบันทึก…";
+  try{await persistAdmin({carry:cr.value,cogs,updatedAt:new Date().toISOString(),updatedBy:S.session.u});
+    await logAudit({action:"Admin แก้ไขยอดยกมา/ต้นทุนยา",month:"",changes,reason:S.adminNote.trim()});
+    S.adminDraft=null;S.adminNote="";S.saving=false;renderAdmin();toast("บันทึกข้อมูล Admin แล้ว");}
+  catch(e){S.saving=false;msg.className="msg err";msg.textContent=errText(e);updateAdminDerived();}
+}
+
+// ---------- users ----------
+function blankUserForm(){return {mode:"add",u:"",name:"",role:"staff",active:true,pass:""};}
+function renderUsers(){
+  if(!isAdmin())return;const f=S.userForm||(S.userForm=blankUserForm());const editing=f.mode==="edit";
+  let h=`<div class="toolbar"><h2>จัดการผู้ใช้งาน</h2><span class="msg" id="usrMsg"></span></div>`;
+  if(!S.canAdmin&&S.mode!=="loading")h+=`<div class="notice">บัญชี claude.ai ที่ใช้อยู่ต้องมีสิทธิ์ Editor จึงจะเพิ่ม แก้ไข หรือลบผู้ใช้ได้</div>`;
+  h+=`<div class="roles"><div><b>Admin</b>จัดการผู้ใช้ กรอกยอดยกมาและต้นทุนยา แก้ไขข้อมูลทุกเดือนแม้ส่งแล้ว ปลดล็อก และดูประวัติการแก้ไข</div>
+    <div><b>เจ้าหน้าที่</b>กรอกข้อมูลรายเดือน บันทึกร่าง และส่งข้อมูล หลังส่งแล้วแก้ไขเองไม่ได้</div>
+    <div><b>ผู้ดูรายงาน</b>ดูข้อมูล สรุปทั้งปี และดาวน์โหลดรายงาน Excel ได้อย่างเดียว</div></div>`;
+  h+=`<form class="uf" id="userForm" autocomplete="off"><h3>${editing?"แก้ไขผู้ใช้: "+esc(f.u):"เพิ่มผู้ใช้ใหม่"}</h3>
+    <label>ชื่อผู้ใช้ (ภาษาอังกฤษ/ตัวเลข)<input id="ufU" value="${esc(f.u)}" ${editing?"disabled":""} autocapitalize="off" spellcheck="false" placeholder="เช่น somchai"></label>
+    <label>ชื่อ-สกุล<input id="ufName" value="${esc(f.name)}" placeholder="เช่น สมชาย ใจดี"></label>
+    <label>สิทธิ์<select id="ufRole">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${f.role===k?"selected":""}>${esc(v)}</option>`).join("")}</select></label>
+    <label>${editing?"รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)":"รหัสผ่าน (อย่างน้อย 6 ตัว)"}<input id="ufPass" type="password" autocomplete="new-password" value=""></label>
+    <label class="chk"><input type="checkbox" id="ufActive" ${f.active?"checked":""}> เปิดใช้งานบัญชี</label>
+    <div class="acts"><button class="btn" type="submit" ${S.canAdmin?"":"disabled"}>${editing?"บันทึกการแก้ไขผู้ใช้":"เพิ่มผู้ใช้"}</button>
+    ${editing?`<button class="btn ghost" type="button" id="ufCancel">ยกเลิก</button>`:""}<span class="msg" id="ufMsg"></span></div></form>`;
+  const list=Object.entries(S.users).sort((a,b)=>a[0].localeCompare(b[0]));
+  h+=`<div class="tw"><table class="t"><thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อ-สกุล</th><th>สิทธิ์</th><th>สถานะ</th><th>แก้ไขล่าสุด</th><th>จัดการ</th></tr></thead><tbody>
+    <tr><td class="l">admin</td><td class="l">ผู้ดูแลระบบหลัก</td><td class="c"><span class="badge admin">Admin</span></td><td class="c">ใช้งาน</td><td class="c">–</td><td class="c st-wait">บัญชีหลัก ลบไม่ได้</td></tr>`;
+  if(!list.length)h+=`<tr><td colspan="6" class="c st-wait">${S.usersLoaded?"ยังไม่มีผู้ใช้อื่น เพิ่มผู้ใช้ด้วยฟอร์มด้านบน":"กำลังโหลดรายชื่อผู้ใช้…"}</td></tr>`;
+  list.forEach(([u,d])=>{const me=S.session.u===u;
+    h+=`<tr><td class="l">${esc(u)}</td><td class="l">${esc(d.name)}</td><td class="c"><span class="badge ${esc(d.role)}">${esc(ROLES[d.role]||d.role)}</span></td>
+     <td class="c">${d.active===false?'<span class="badge off">ระงับ</span>':"ใช้งาน"}</td><td class="c">${esc(when(d.updatedAt))}</td>
+     <td class="c"><button class="linkbtn" type="button" data-uedit="${esc(u)}">แก้ไข</button>
+     ${me?'<span class="st-wait">(บัญชีที่ใช้อยู่)</span>':`<button class="linkbtn danger" type="button" data-udel="${esc(u)}" ${S.canAdmin?"":"disabled"}>${S.confirm&&S.confirm.a==="del:"+u&&Date.now()-S.confirm.t<6000?"กดอีกครั้งเพื่อยืนยันลบ":"ลบ"}</button>`}</td></tr>`;});
+  h+=`</tbody></table></div><p class="ref">รหัสผ่านถูกเก็บแบบเข้ารหัสทางเดียว Admin ดูรหัสเดิมไม่ได้ ถ้าผู้ใช้ลืมรหัส ให้กด “แก้ไข” แล้วตั้งรหัสผ่านใหม่</p>`;
+  $("#v-users").innerHTML=h;
+}
+async function saveUserForm(){
+  const f=S.userForm,msg=$("#ufMsg");msg.className="msg err";
+  const u=(f.mode==="edit"?f.u:$("#ufU").value.trim().toLowerCase()),name=$("#ufName").value.trim(),r=$("#ufRole").value,active=$("#ufActive").checked,pass=$("#ufPass").value;
+  if(f.mode==="add"){
+    if(!/^[a-z0-9._-]{3,32}$/.test(u)){msg.textContent="ชื่อผู้ใช้ใช้ a-z 0-9 . _ - ได้ 3–32 ตัว";return;}
+    if(u==="admin"||S.users[u]){msg.textContent="ชื่อผู้ใช้นี้มีอยู่แล้ว";return;}
+    if(pass.length<6){msg.textContent="รหัสผ่านต้องมีอย่างน้อย 6 ตัว";return;}
+  }else if(pass&&pass.length<6){msg.textContent="รหัสผ่านต้องมีอย่างน้อย 6 ตัว";return;}
+  if(!name){msg.textContent="กรอกชื่อ-สกุล";return;}
+  if(f.mode==="edit"&&u===S.session.u&&(r!=="admin"||!active)){msg.textContent="เปลี่ยนสิทธิ์หรือระงับบัญชีที่กำลังใช้อยู่ไม่ได้";return;}
+  const prev=S.users[u]||null,now=new Date().toISOString();
+  const doc=Object.assign({},prev||{createdAt:now,createdBy:S.session.u},{name,role:r,active,updatedAt:now,updatedBy:S.session.u});
+  if(pass){doc.salt=hex(crypto.getRandomValues(new Uint8Array(16)));doc.iter=PBKDF2_ITER;doc.hash=await pbkdf2(pass,doc.salt,PBKDF2_ITER);}
+  const changes=[];if(prev){if(prev.name!==name)changes.push({label:"ชื่อ-สกุล",from:prev.name,to:name});if(prev.role!==r)changes.push({label:"สิทธิ์",from:ROLES[prev.role],to:ROLES[r]});
+    if((prev.active!==false)!==active)changes.push({label:"สถานะ",from:prev.active===false?"ระงับ":"ใช้งาน",to:active?"ใช้งาน":"ระงับ"});if(pass)changes.push({label:"รหัสผ่าน",from:"",to:"ตั้งใหม่"});}
+  else changes.push({label:"สิทธิ์",from:"",to:ROLES[r]});
+  msg.className="msg";msg.textContent="กำลังบันทึก…";
+  try{await persistUser(u,doc);await logAudit({action:prev?"แก้ไขผู้ใช้ "+u:"เพิ่มผู้ใช้ "+u,month:"",changes,reason:""});
+    S.userForm=blankUserForm();renderUsers();toast(prev?"บันทึกการแก้ไขผู้ใช้ "+u+" แล้ว":"เพิ่มผู้ใช้ "+u+" แล้ว");}
+  catch(e){msg.className="msg err";msg.textContent=errText(e);}
+}
+async function deleteUser(u){
+  try{await removeUser(u);await logAudit({action:"ลบผู้ใช้ "+u,month:"",changes:[],reason:""});S.confirm=null;if(S.userForm&&S.userForm.u===u)S.userForm=blankUserForm();renderUsers();toast("ลบผู้ใช้ "+u+" แล้ว");}
+  catch(e){const m=$("#usrMsg");m.className="msg err";m.textContent=errText(e,"ลบไม่สำเร็จ ลองอีกครั้ง");}
+}
+
+// ---------- history ----------
+function renderHistory(){
+  if(!isAdmin())return;
+  const rows=S.audit.filter(a=>!S.histMonth||a.month===S.histMonth);
+  let h=`<div class="toolbar"><h2>ประวัติการบันทึกและแก้ไข</h2><div class="filters"><label for="histSel">เดือน</label>
+    <select id="histSel"><option value="">ทั้งหมด</option>${MONTHS.map(m=>`<option value="${m.key}" ${S.histMonth===m.key?"selected":""}>${esc(m.short)}</option>`).join("")}</select></div></div>
+    <div class="tw"><table class="t"><thead><tr><th>วันเวลา</th><th>ผู้ทำรายการ</th><th>รายการ</th><th>เดือน</th><th>สิ่งที่เปลี่ยน</th><th>เหตุผล</th></tr></thead><tbody>`;
+  if(!rows.length)h+=`<tr><td colspan="6" class="c st-wait">ยังไม่มีประวัติ</td></tr>`;
+  rows.slice(0,300).forEach(a=>{const ch=(a.changes||[]);
+    const chs=ch.length?ch.slice(0,12).map(c=>`${esc(c.label)}: ${typeof c.from==="number"?fmt(c.from):esc(c.from)} → <b>${typeof c.to==="number"?fmt(c.to):esc(c.to)}</b>`).join("<br>")+(ch.length>12?`<br>และอีก ${ch.length-12} รายการ`:""):'<span class="st-wait">–</span>';
+    h+=`<tr><td class="c">${esc(when(a.at))}</td><td class="l">${esc(a.byName||a.by)}</td><td class="l">${esc(a.action)}</td><td class="c">${esc(MSHORT[a.month]||"–")}</td><td class="l chg">${chs}</td><td class="l">${esc(a.reason||"–")}</td></tr>`;});
+  h+=`</tbody></table></div>`;
+  $("#v-history").innerHTML=h;
+}
+
+// ---------- summary & export ----------
+function renderSummary(){
+  const inv=inventory(false);let tr=0,te=0,tn=0,tc=0;
+  let h=`<div class="toolbar"><h2>สรุปผลการดำเนินงานรายเดือน ปีงบประมาณ 2570</h2>
+   <div style="display:flex;gap:8px;align-items:center"><span class="msg" id="dlMsg"></span><button class="btn" type="button" id="dlBtn" ${(S.downloads||S.standalone)&&window.XLSX?"":"hidden"}>ดาวน์โหลดรายงาน Excel</button></div></div>
+   <div class="tw"><table class="t"><thead><tr><th>เดือน</th><th>รายรับหัตถการ</th><th>รายรับยาสมุนไพร</th><th>รวมรายรับ</th><th>รวมรายจ่าย</th><th>กำไรสุทธิ</th><th>${esc(COGS_LABEL)}</th><th>ยาคงคลัง<br>คงเหลือยกไป</th><th>สถานะ</th></tr></thead><tbody>`;
+  MONTHS.forEach((m,i)=>{const c=compute(m.key);tr+=c.rev;te+=c.exp;tn+=c.net;tc+=inv[i].cogs||0;
+    const st=[stLabel(m.key)];if(isDirty(m.key))st.push("มีแก้ไขยังไม่บันทึก");if(inv[i].cogs==null)st.push("รอต้นทุนยา");
+    const ok=statusOf(m.key)==="submitted"&&inv[i].cogs!=null;
+    h+=`<tr><td class="c">${esc(m.short)}</td><td class="r">${fmt(c.revProc)}</td><td class="r">${fmt(c.revHerb)}</td><td class="r">${fmt(c.rev)}</td><td class="r">${fmt(c.exp)}</td><td class="r ${c.net<0?"neg":""}">${fmt(c.net)}</td><td class="r">${inv[i].cogs==null?"–":fmt(inv[i].cogs)}</td><td class="r ${inv[i].end<0?"neg":""}">${fmt(inv[i].end)}</td><td class="c ${ok?"st-ok":"st-wait"}">${esc(st.join(", "))}</td></tr>`;});
+  const col=k=>MONTHS.reduce((s,m)=>s+compute(m.key)[k],0);
+  h+=`</tbody><tfoot><tr class="tot"><td class="c">รวม</td><td class="r">${fmt(col("revProc"))}</td><td class="r">${fmt(col("revHerb"))}</td><td class="r">${fmt(tr)}</td><td class="r">${fmt(te)}</td><td class="r ${tn<0?"neg":""}">${fmt(tn)}</td><td class="r">${fmt(tc)}</td><td class="r">${fmt(inv[11].end)}</td><td></td></tr></tfoot></table></div>
+   <p class="ref">ไฟล์ Excel ที่ดาวน์โหลดมีรายงานประจำเดือนครบ 12 เดือน (เดือนนี้และสะสมตั้งแต่ต้นปี) พร้อมตารางยาคงคลังและสรุปทั้งปี</p>`;
+  $("#v-summary").innerHTML=h;
+}
+function reportRows(key){
+  const c=compute(key),cum=f=>cumulative(key,f),inv=inventory(false).find(x=>x.key===key),rows=[];
+  const add=(l,f)=>rows.push([l,c[f],cum(f)]);const head=l=>rows.push([l,null,null]);
+  head("รายได้จากการบริการ (หัตถการทางการแพทย์แผนไทยฯ)");
+  add("1. ค่าบริการนวดประคบเพื่อรักษา","r1");add("    - กำไรค่าบริการนวดประคบเพื่อรักษา","p1");
+  add("2. ค่าบริการอบไอน้ำสมุนไพร","r2");add("    - กำไรค่าบริการอบไอน้ำสมุนไพร","p2");
+  add("3. ค่าบริการดูแลมารดาหลังคลอด","r3");add("    - กำไรค่าบริการดูแลมารดาหลังคลอด","p3");
+  add("รวมรายรับจากการให้บริการไม่หักทุน (หัตถการ)","revProc");add("กำไรรวมจากการให้บริการ (หัตถการ)","profProc");
+  head("รายได้จากการบริการ (ยาสมุนไพร)");
+  add("4. มูลค่าจำหน่ายยาสมุนไพรสำเร็จรูป","r4");add("    - กำไรการจำหน่ายยาสมุนไพร","p4");
+  add("5. มูลค่าจำหน่ายยาปรุงเฉพาะรายสมุนไพร","r5");add("    - กำไรจากการจำหน่ายยาปรุงเฉพาะราย","p5");
+  add("รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)","revHerb");add("กำไรรวมจากการให้บริการ (ยาสมุนไพร)","profHerb");
+  add("รวมรายรับทั้งหมด","rev");rows.push([]);
+  rows.push(["รายการรายจ่าย","จำนวนเงิน (บาท)","รวมจ่ายตั้งแต่ต้นปี"]);
+  EXP.forEach(g=>{head(g.title);g.items.forEach(([f,l])=>add(l,f));g.calcs.forEach(([l,k])=>add(l,k));if(g.admin)add(COGS_LABEL,"cogs");(g.after||[]).forEach(([f,l])=>add(l,f));});
+  add("รวมรายจ่ายทั้งหมด","exp");add("กำไรสุทธิหลังหักค่าใช้จ่าย","net");rows.push([]);
+  rows.push(["สรุปมูลค่ายาสมุนไพรคงคลัง (ราคาทุน)",null,null]);
+  rows.push(["ยอดยาคงคลังยกมา",inv.begin,null]);rows.push(["บวก ค่ายาสมุนไพรที่ซื้อในเดือนนี้",inv.purchase,null]);
+  rows.push(["หัก "+COGS_LABEL,inv.cogs||0,null]);rows.push(["ยอดยาคงคลังคงเหลือยกไป",inv.end,null]);
+  return rows;
+}
+function sheetFrom(aoa,widths){const ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=widths.map(w=>({wch:w}));
+  const rg=XLSX.utils.decode_range(ws["!ref"]);for(let R=rg.s.r;R<=rg.e.r;R++)for(let C=1;C<=rg.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C});if(ws[a]&&ws[a].t==="n")ws[a].z="#,##0.00";}return ws;}
+function buildWorkbook(){
+  const wb=XLSX.utils.book_new(),inv=inventory(false);
+  const sum=[["สรุปผลการดำเนินงานรายเดือน ปีงบประมาณ 2570"],['ศูนย์ส่งเสริมสุขภาพแผนไทย “กมลาศรม” สำนักงานสาธารณสุขจังหวัดพิษณุโลก'],[],
+    ["เดือน","รายรับหัตถการ","รายรับยาสมุนไพร","รวมรายรับ","รวมรายจ่าย","กำไรสุทธิ",COGS_LABEL,"ยาคงคลังคงเหลือยกไป","สถานะ"]];
+  MONTHS.forEach((m,i)=>{const c=compute(m.key);sum.push([m.short,c.revProc,c.revHerb,c.rev,c.exp,c.net,inv[i].cogs||0,inv[i].end,stLabel(m.key)]);});
+  const col=k=>MONTHS.reduce((s,m)=>s+compute(m.key)[k],0);
+  sum.push(["รวม",col("revProc"),col("revHerb"),col("rev"),col("exp"),col("net"),inv.reduce((s,r)=>s+(r.cogs||0),0),inv[11].end,""]);
+  XLSX.utils.book_append_sheet(wb,sheetFrom(sum,[12,18,18,18,18,18,26,20,12]),"สรุปปีงบ 2570");
+  const adm=[["ยาสมุนไพรคงคลัง ปีงบประมาณ 2570 (Admin)"],[],["ยอดยกมา ณ ต้นเดือนตุลาคม 2569",carryUse(false)||0],[],
+    ["เดือน","ยอดยาคงคลังยกมา","ค่ายาสมุนไพรที่ซื้อในเดือนนี้",COGS_LABEL,"ยอดยาคงคลังคงเหลือยกไป"]];
+  inv.forEach((r,i)=>adm.push([MONTHS[i].short,r.begin,r.purchase,r.cogs||0,r.end]));
+  XLSX.utils.book_append_sheet(wb,sheetFrom(adm,[30,20,24,30,22]),"Admin");
+  MONTHS.forEach(m=>{const aoa=[["รายงานผลการดำเนินงาน ปีงบประมาณ 2570"],['ศูนย์ส่งเสริมสุขภาพแผนไทย “กมลาศรม” สำนักงานสาธารณสุขจังหวัดพิษณุโลก'],["ประจำเดือน "+m.full],[],
+    ["รายการรายรับจากการบริการ","จำนวนเงิน (บาท)","รวมรับตั้งแต่ต้นปี"]].concat(reportRows(m.key));
+    XLSX.utils.book_append_sheet(wb,sheetFrom(aoa,[62,18,20]),m.short);});
+  return wb;
+}
+async function download(){
+  const msg=$("#dlMsg");msg.className="msg";msg.textContent="";
+  try{const buf=XLSX.write(buildWorkbook(),{bookType:"xlsx",type:"array"});
+    const fname="รายงานผลการดำเนินงาน_ปีงบ2570.xlsx",blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    if(S.downloads)await S.downloads.save({filename:fname,data:blob});
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+    msg.textContent="ดาวน์โหลดแล้ว";}
+  catch(e){const c=e&&e.code;if(c==="declined")return;if(c==="rate_limited"){msg.textContent="มีหน้าต่างดาวน์โหลดเปิดอยู่ ลองอีกครั้งสักครู่";return;}
+    msg.className="msg err";msg.textContent="ดาวน์โหลดไม่ได้ในมุมมองนี้";if(["unavailable","not_granted","capability_disabled","capability_removed"].includes(c))$("#dlBtn").hidden=true;}
+}
+
+// ---------- events ----------
+$("#strip").addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b)return;S.cur=b.dataset.k;S.reason="";S.confirm=null;$("#saveMsg").className="msg";renderStrip();renderForm();});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.f){if(!S.drafts[S.cur])S.drafts[S.cur]=Object.assign({},savedExprs(S.cur));S.drafts[S.cur][t.dataset.f]=t.value;$("#saveMsg").className="msg";updateDerived();return;}
+  if(t.id==="reasonIn"){S.reason=t.value;return;}
+  if(S.userForm&&(t.id==="ufU"||t.id==="ufName")){S.userForm[t.id==="ufU"?"u":"name"]=t.value;return;}
+  if(t.id==="admNoteIn"){S.adminNote=t.value;return;}
+  if(t.id==="carryIn"||(t.dataset&&t.dataset.cogs)){if(!S.adminDraft)S.adminDraft=JSON.parse(JSON.stringify(adminState()));
+    if(t.id==="carryIn")S.adminDraft.carry=t.value;else S.adminDraft.cogs[t.dataset.cogs]=t.value;
+    const m=$("#admMsg");if(m){m.className="msg";m.textContent="มีการแก้ไขที่ยังไม่บันทึก";}updateAdminDerived();}
+});
+document.addEventListener("change",e=>{const t=e.target;if(t.id==="histSel"){S.histMonth=t.value;renderHistory();}
+  if(S.userForm&&t.id==="ufRole")S.userForm.role=t.value;if(S.userForm&&t.id==="ufActive")S.userForm.active=t.checked;});
+document.addEventListener("submit",e=>{if(e.target.id==="userForm"){e.preventDefault();saveUserForm();}});
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button");if(!t)return;const id=t.id;
+  if(id==="logoutBtn"){if(MONTHS.some(m=>isDirty(m.key))||S.adminDraft){if(!armed("logout")){S.confirm={a:"logout",k:S.cur,t:Date.now()};t.textContent="มีข้อมูลยังไม่บันทึก กดอีกครั้งเพื่อออก";return;}}endSession();toast("ออกจากระบบแล้ว");return;}
+  if(id==="bRevert"){delete S.drafts[S.cur];S.confirm=null;renderStrip();renderForm();return;}
+  if(id==="bDraft"){saveMonth("draft");return;}
+  if(id==="bAdminSave"){saveMonth("admin");return;}
+  if(id==="bSubmit"){if(!armed("submit")){S.confirm={a:"submit",k:S.cur,t:Date.now()};updateBar();setTimeout(updateBar,6100);return;}saveMonth("submit");return;}
+  if(id==="bUnlock"){if(!armed("unlock")){S.confirm={a:"unlock",k:S.cur,t:Date.now()};updateBar();setTimeout(updateBar,6100);return;}saveMonth("unlock");return;}
+  if(id==="admRevert"){S.adminDraft=null;renderAdmin();return;}
+  if(id==="admSave"){saveAdmin();return;}
+  if(id==="dlBtn"){download();return;}
+  if(id==="ufCancel"){S.userForm=blankUserForm();renderUsers();return;}
+  if(t.dataset.uedit){const u=t.dataset.uedit,d=S.users[u];if(!d)return;S.userForm={mode:"edit",u,name:d.name,role:d.role,active:d.active!==false,pass:""};renderUsers();$("#ufName").focus();return;}
+  if(t.dataset.udel){const u=t.dataset.udel;if(!(S.confirm&&S.confirm.a==="del:"+u&&Date.now()-S.confirm.t<6000)){S.confirm={a:"del:"+u,k:"",t:Date.now()};renderUsers();setTimeout(()=>{if(S.view==="users")renderUsers();},6100);return;}deleteUser(u);return;}
+});
+window.addEventListener("beforeunload",e=>{if(MONTHS.some(m=>isDirty(m.key))||S.adminDraft){e.preventDefault();e.returnValue="";}});
+
+function refreshAll(){
+  if(!S.session){restoreSession();if(S.session){renderShell();}return;}
+  syncSession();if(!S.session)return;
+  if(S.view==="form"){renderStrip();const focused=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.f;
+    if(!isDirty(S.cur)&&!focused)renderForm();else updateDerived();}
+  else if(S.view==="admin"){if(!S.adminDraft)renderAdmin();else updateAdminDerived();}
+  else if(S.view==="users"){const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#userForm")))renderUsers();}
+  else if(S.view==="history")renderHistory();
+  else renderSummary();
+}
+function setConn(t,warn){const c=$("#conn");c.textContent=t;c.classList.toggle("warn",!!warn);}
+
+// ---------- boot ----------
+restoreSession();renderShell();
+async function boot(){
+  const hasClaude=!!(window.claude&&window.claude.use);
+  const [db,user,dl]=hasClaude?await Promise.all([window.claude.use("db"),window.claude.use("user"),window.claude.use("downloads")]):[null,null,null];
+  S.downloads=dl;S.standalone=!hasClaude;
+  if(!db){S.mode="local";localLoad();S.usersLoaded=true;S.canAdmin=true;
+    setConn("โหมดในเครื่อง: ข้อมูลบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น ยังไม่แชร์กับผู้อื่น",true);restoreSession();renderShell();return;}
+  S.db=db;S.mode="db";
+  if(user){const [ce,cw]=await Promise.all([user.canEdit(),user.can("data.write")]);S.canAdmin=!!ce;S.readonlyMonths=cw===false;}
+  setConn("กำลังโหลดข้อมูล…");
+  const need=new Set(["months","admin","users"]);
+  const timer=setTimeout(()=>{if(need.size)setConn("ยังโหลดข้อมูลไม่ได้ ข้อมูลที่เห็นอาจยังไม่ล่าสุด",true);},10000);
+  const done=n=>{if(need.delete(n)&&!need.size){clearTimeout(timer);setConn("เชื่อมต่อแล้ว · ข้อมูลแชร์ร่วมกันทุกคน");}};
+  const fail=err=>{clearTimeout(timer);setConn("เชื่อมต่อฐานข้อมูลไม่ได้ ("+err.code+")",true);};
+  db.collection("months").onSnapshot(qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data();});S.months=o;if(!qs.metadata.fromCache)done("months");refreshAll();},fail);
+  db.doc("admin/inventory").onSnapshot(s=>{const d=s.exists?s.data():null;S.admin=d?{carry:typeof d.carry==="number"?d.carry:null,cogs:Object.assign({},d.cogs||{}),updatedAt:d.updatedAt}:{carry:null,cogs:{}};
+    if(!s.metadata.fromCache)done("admin");refreshAll();},fail);
+  db.collection("users").onSnapshot(qs=>{const o={};qs.docs.forEach(d=>{o[d.id]=d.data();});S.users=o;if(!qs.metadata.fromCache){S.usersLoaded=true;done("users");}refreshAll();},fail);
+  db.collection("audit").orderBy("at","desc").limit(500).onSnapshot(qs=>{S.audit=qs.docs.map(d=>Object.assign({id:d.id},d.data()));if(S.view==="history")renderHistory();},()=>{});
+  refreshAll();
+}
+boot();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# ค่าลับ (connection string, API key) — ห้าม commit
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# ไฟล์ Excel ชั่วคราว และไฟล์ข้อมูลจริง
+~$*
+*รายงานพันยอดประจำเดือน*.xlsx
+
+# ระบบปฏิบัติการ
+.DS_Store
+Thumbs.db
