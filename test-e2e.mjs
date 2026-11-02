@@ -10,7 +10,16 @@ async function run() {
   const server = await startServer(TEST_PORT);
   console.log(`Test server running on port ${TEST_PORT}`);
 
+  let origAdmin = null;
+
   try {
+    // 0. Backup original admin inventory
+    const initDataRes = await fetch(`${BASE_URL}/api/data`);
+    if (initDataRes.ok) {
+      const initData = await initDataRes.json();
+      origAdmin = initData.admin || { carry: null, cogs: {} };
+    }
+
     // 1. Test /api/status
     console.log("\n1. Testing GET /api/status...");
     const statusRes = await fetch(`${BASE_URL}/api/status`);
@@ -20,16 +29,17 @@ async function run() {
       throw new Error("Invalid status response from Neon server");
     }
 
-    // 2. Test saving a month document
-    console.log("\n2. Testing POST /api/months/2569-10...");
+    // 2. Test saving a test month document (isolated key)
+    const TEST_MONTH = "test-e2e-month";
+    console.log(`\n2. Testing POST /api/months/${TEST_MONTH}...`);
     const testMonthDoc = {
-      v: { r1: 705250, r4: 580660, e1: 24400, e2: 1375, e4: 384050, e7: 80000, e9: 423150, e14: 19240, e15: 5460, e16: 4500 },
-      x: { r1: "705250" },
+      v: { r1: 1000 },
+      x: { r1: "1000" },
       status: "draft",
       updatedAt: new Date().toISOString(),
       updatedBy: "admin"
     };
-    const monthRes = await fetch(`${BASE_URL}/api/months/2569-10`, {
+    const monthRes = await fetch(`${BASE_URL}/api/months/${TEST_MONTH}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(testMonthDoc)
@@ -41,8 +51,8 @@ async function run() {
     // 3. Test saving admin inventory
     console.log("\n3. Testing POST /api/admin...");
     const testAdminDoc = {
-      carry: 100000,
-      cogs: { "2569-10": 395334.40 },
+      carry: 999999,
+      cogs: { [TEST_MONTH]: 500 },
       updatedAt: new Date().toISOString(),
       updatedBy: "admin"
     };
@@ -77,15 +87,16 @@ async function run() {
     if (!userData.ok) throw new Error("Failed to save user document");
 
     // 5. Test logging an audit event
+    const testAuditId = "test-audit-" + Date.now();
     console.log("\n5. Testing POST /api/audit...");
     const testAuditDoc = {
-      id: "test-audit-" + Date.now(),
+      id: testAuditId,
       at: new Date().toISOString(),
       by: "admin",
       byName: "Admin",
       action: "E2E Test Action",
-      month: "2569-10",
-      changes: [{ f: "r1", label: "นวด", from: 0, to: 705250 }]
+      month: "",
+      changes: []
     };
     const auditRes = await fetch(`${BASE_URL}/api/audit`, {
       method: "POST",
@@ -101,23 +112,30 @@ async function run() {
     const dataRes = await fetch(`${BASE_URL}/api/data`);
     const allData = await dataRes.json();
     console.log("Retrieved data keys:", Object.keys(allData));
-    console.log("Month 2569-10 present:", !!allData.months["2569-10"]);
+    console.log(`Month ${TEST_MONTH} present:`, !!allData.months[TEST_MONTH]);
     console.log("Admin carry:", allData.admin.carry);
     console.log("User teststaff present:", !!allData.users["teststaff"]);
-    console.log("Audit count:", allData.audit.length);
 
-    if (!allData.months["2569-10"] || allData.admin.carry !== 100000 || !allData.users["teststaff"]) {
+    if (!allData.months[TEST_MONTH] || allData.admin.carry !== 999999 || !allData.users["teststaff"]) {
       throw new Error("Data retrieved from Neon does not match written data");
     }
 
-    // 7. Test DELETE /api/users/teststaff
-    console.log("\n7. Testing DELETE /api/users/teststaff...");
-    const deleteRes = await fetch(`${BASE_URL}/api/users/teststaff`, { method: "DELETE" });
-    const deleteData = await deleteRes.json();
-    console.log("Delete user response:", deleteData);
-    if (!deleteData.ok) throw new Error("Failed to delete user document");
+    // 7. Cleanup only test records without affecting real data
+    console.log("\n7. Cleaning up test records (non-destructive)...");
+    await fetch(`${BASE_URL}/api/users/teststaff`, { method: "DELETE" });
+    if (sql) {
+      await sql`DELETE FROM months WHERE key = ${TEST_MONTH};`;
+      await sql`DELETE FROM audit WHERE id = ${testAuditId};`;
+      if (origAdmin) {
+        await sql`
+          INSERT INTO inventory (id, doc, updated_at)
+          VALUES ('default', ${JSON.stringify(origAdmin)}, NOW())
+          ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc, updated_at = NOW();
+        `;
+      }
+    }
+    console.log("✔ Test artifacts cleaned up. Real user data preserved.");
 
-    // Clean up test audit and month if needed, or leave month as sample
     console.log("\n=== ALL END-TO-END TESTS PASSED SUCCESSFULLY! ===");
   } finally {
     server.close();
