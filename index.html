@@ -255,7 +255,7 @@ const MONTHS=[
  ["2570-07","ก.ค.70","กรกฎาคม 2570"],["2570-08","ส.ค.70","สิงหาคม 2570"],["2570-09","ก.ย.70","กันยายน 2570"]
 ].map(([key,short,full])=>({key,short,full}));
 const MSHORT=Object.fromEntries(MONTHS.map(m=>[m.key,m.short]));
-const COGS_LABEL="ต้นทุนค่ายาสมุนไพรจากการขายยาสมุนไพร ณ เดือนปัจจุบัน";
+const COGS_LABEL="ต้นทุนค่ายาสมุนไพรจากการขายยาสมุนไพร ณ เดือนปัจจุบัน(คลังเล็ก)";
 // บัญชี Admin หลัก: เปลี่ยนรหัสผ่านได้ตามวิธีใน README.md
 const ADMIN_SALT="5bcae3b029495973f867037bcda5458f";
 const ADMIN_HASH="339e8008a13dc9c59bcdfc211ca9ef2881a18b034f99c14347d38cff6be215ca";
@@ -275,7 +275,7 @@ const EXP=[
   calcs:[["รวมต้นทุนการจัดบริการอื่นๆ","other"]]},
  {title:"รายจ่ายจากบริการยาสมุนไพร",items:[
    ["e4","4. ค่ายาสมุนไพรจาก รพ.บางกระทุ่ม-รพ.บ้านตาก"],["e5","5. ค่ายาบริษัทบางกอกดรัก (ไพลวาน่า)"],["e6","6. ค่ายาองค์การเภสัช (ยาอมมะแว้ง)"],["e7","7. ค่ายาอภัยภูเบศร (สเปรย์กระดูกไก่ดำ)"]],
-  calcs:[["ค่ายาสมุนไพรที่ซื้อในเดือนนี้","purchase",1]],admin:true,after:[["e8","8. ต้นทุนค่ายาปรุงเฉพาะรายสมุนไพร"]]},
+  calcs:[["ค่ายาสมุนไพรที่ซื้อในเดือนนี้","purchase",1]],after:[["cogs",COGS_LABEL,"เช่น 395334.40"],["e8","8. ต้นทุนค่ายาปรุงเฉพาะรายสมุนไพร"]]},
  {title:"รายจ่ายจากบริการด้านหัตถการ",items:[
    ["e9","9. ค่าจ้างผู้ช่วยแพทย์แผนไทย"],["e10","10. ต้นทุนบริการอบสมุนไพร"],["e11","11. ต้นทุนบริการการดูแลมารดาหลังคลอด"]],
   calcs:[["รวมค่าใช้จ่าย","proc"]]},
@@ -329,16 +329,16 @@ function canEditMonth(k){if(S.mode==="loading"||S.readonlyMonths||!S.session)ret
 function armed(a){const c=S.confirm;return c&&c.a===a&&c.k===S.cur&&Date.now()-c.t<6000;}
 
 // ---------- month data ----------
-function savedExprs(key){const m=S.months[key];if(!m)return {};const x=m.x||{},v=m.v||{},o={};FIELDS.forEach(f=>{if(x[f]!=null&&x[f]!=="")o[f]=x[f];else if(v[f]!=null)o[f]=fmt(v[f]);});return o;}
+function savedExprs(key){const m=S.months[key],x=m&&m.x||{},v=m&&m.v||{},o={};FIELDS.forEach(f=>{if(x[f]!=null&&x[f]!=="")o[f]=String(x[f]);else if(v[f]!=null)o[f]=fmt(v[f]);else if(f==="cogs"&&S.admin&&S.admin.cogs&&S.admin.cogs[key]!=null)o[f]=fmt(S.admin.cogs[key]);else o[f]="";});return o;}
 function exprsFor(key){return S.drafts[key]||savedExprs(key);}
 function valuesFor(key){const e=exprsFor(key),o={};FIELDS.forEach(f=>{const r=evalExpr(e[f]);o[f]=r.ok&&r.value!=null?r.value:0;});return o;}
 function isDirty(key){const d=S.drafts[key];if(!d)return false;const s=savedExprs(key);return FIELDS.some(f=>(d[f]||"")!==(s[f]||""));}
-function adminState(){return S.adminDraft||{carry:S.admin.carry==null?"":fmt(S.admin.carry),cogs:Object.fromEntries(MONTHS.map(m=>[m.key,S.admin.cogs[m.key]==null?"":fmt(S.admin.cogs[m.key])]))};}
-function cogsSaved(key){const v=S.admin.cogs[key];return typeof v==="number"?v:null;}
-function cogsUse(key,useDraft){if(useDraft&&S.adminDraft){const r=evalExpr(S.adminDraft.cogs[key]);return r.ok&&r.value!=null?r.value:null;}return cogsSaved(key);}
+function adminState(){return S.adminDraft||{carry:S.admin.carry==null?"":fmt(S.admin.carry),cogs:Object.fromEntries(MONTHS.map(m=>{const v=(S.months[m.key]&&S.months[m.key].v&&S.months[m.key].v.cogs!=null)?S.months[m.key].v.cogs:S.admin.cogs[m.key];return [m.key,v==null?"":fmt(v)];}))};}
+function cogsSaved(key){if(S.months[key]&&S.months[key].v&&typeof S.months[key].v.cogs==="number")return S.months[key].v.cogs;const v=S.admin.cogs&&S.admin.cogs[key];return typeof v==="number"?v:null;}
+function cogsUse(key,useDraft){const ex=exprsFor(key);if(ex&&ex.cogs!=null&&ex.cogs!==""){const r=evalExpr(ex.cogs);if(r.ok&&r.value!=null)return r.value;}if(useDraft&&S.adminDraft&&S.adminDraft.cogs&&S.adminDraft.cogs[key]!=null){const r=evalExpr(S.adminDraft.cogs[key]);return r.ok&&r.value!=null?r.value:null;}return cogsSaved(key);}
 function carryUse(useDraft){if(useDraft&&S.adminDraft){const r=evalExpr(S.adminDraft.carry);return r.ok?r.value:null;}return typeof S.admin.carry==="number"?S.admin.carry:null;}
 function compute(key,useAdminDraft){
-  const v=valuesFor(key),cogs=cogsUse(key,useAdminDraft)||0,c=Object.assign({},v,{cogs});
+  const v=valuesFor(key),cogs=v.cogs!=null?v.cogs:(cogsUse(key,useAdminDraft)||0),c=Object.assign({},v,{cogs});
   c.other=v.e1+v.e2+v.e3;c.purchase=v.e4+v.e5+v.e6+v.e7;c.proc=v.e9+v.e10+v.e11;c.ot=v.e12+v.e13+v.e14+v.e15+v.e16;
   c.p1=v.r1-v.e9;c.p2=v.r2-v.e10;c.p3=v.r3-v.e11;c.p4=v.r4-cogs;c.p5=v.r5-v.e8;
   c.revProc=v.r1+v.r2+v.r3;c.profProc=c.p1+c.p2+c.p3;c.revHerb=v.r4+v.r5;c.profHerb=c.p4+c.p5;
@@ -347,7 +347,7 @@ function compute(key,useAdminDraft){
 function cumulative(key,field,useAdminDraft){let t=0;for(const m of MONTHS){t+=compute(m.key,useAdminDraft)[field];if(m.key===key)break;}return t;}
 function inventory(useDraft){
   const carry=carryUse(useDraft);let prev=carry==null?0:carry;
-  return MONTHS.map((m,i)=>{const begin=i===0?(carry==null?0:carry):prev;const c=compute(m.key,useDraft);const cg=cogsUse(m.key,useDraft);const end=begin+c.purchase-(cg||0);prev=end;
+  return MONTHS.map((m,i)=>{const begin=i===0?(carry==null?0:carry):prev;const c=compute(m.key,useDraft);const cg=c.cogs;const end=begin+c.purchase-(cg||0);prev=end;
     return {key:m.key,begin,purchase:c.purchase,cogs:cg,end,carryMissing:i===0&&carry==null};});
 }
 
@@ -476,7 +476,6 @@ function renderForm(){
   let exp="<h3>รายการรายจ่าย</h3>";
   EXP.forEach(g=>{exp+=`<fieldset><legend>${esc(g.title)}</legend>`;g.items.forEach(([f,l,h])=>{exp+=inputRow(f,l,h,ex);});
     g.calcs.forEach(([l,k,s])=>{exp+=calcRow(l,k,s);});
-    if(g.admin)exp+=`<div class="row"><span>${esc(COGS_LABEL)}</span><div class="adminbox"><span class="v num" data-o="cogsShow">–</span><span class="note" data-o="cogsNote"></span></div></div>`;
     (g.after||[]).forEach(([f,l,h])=>{exp+=inputRow(f,l,h,ex);});exp+="</fieldset>";});
   exp+=`<div class="calc big"><span>รวมรายจ่ายทั้งหมด</span><span class="v" data-o="exp">0.00</span></div>`+calcRow("รวมจ่ายตั้งแต่ต้นปี","cumExp",1);
   exp+=`<fieldset style="margin-top:18px"><legend>ยาสมุนไพรคงคลัง (ราคาทุน)</legend>
@@ -520,10 +519,8 @@ function updateDerived(){
   ["p1","p2","p3","p4","p5","revProc","profProc","revHerb","profHerb","other","purchase","proc","ot","rev","exp"].forEach(f=>setOut(f,c[f]));
   setOut("net",c.net,c.net<0);setOut("cumRev",cumulative(k,"rev"));setOut("cumExp",cumulative(k,"exp"));
   const cn=cumulative(k,"net");setOut("cumNet",cn,cn<0);
-  const cg=cogsSaved(k);setOut("cogsShow",cg==null?"รอ Admin กรอก":fmt(cg));
-  setOut("cogsNote",cg==null?"ยังไม่นับในรายจ่าย จนกว่า Admin จะกรอก":"Admin กรอกในแท็บยอดยกมาและต้นทุนยา");
   const inv=inventory(false).find(x=>x.key===k);
-  setOut("invBegin",inv.carryMissing?"รอ Admin กรอกยอดยกมา":fmt(inv.begin));setOut("invBuy",inv.purchase);setOut("invCogs",inv.cogs==null?"รอ Admin กรอก":fmt(inv.cogs));setOut("invEnd",inv.end,inv.end<0);
+  setOut("invBegin",inv.carryMissing?"รอ Admin กรอกยอดยกมา":fmt(inv.begin));setOut("invBuy",inv.purchase);setOut("invCogs",fmt(inv.cogs||0));setOut("invEnd",inv.end,inv.end<0);
   FIELDS.forEach(f=>{const el=document.querySelector(`[data-echo="${f}"]`),inp=document.getElementById("in-"+f);if(!el||!inp)return;
     const r=evalExpr(ex[f]);
     if(!r.ok){el.textContent="สูตรหรือตัวเลขไม่ถูกต้อง";el.className="echo bad";inp.classList.add("bad");}
@@ -551,7 +548,9 @@ async function saveMonth(kind){
     submittedAt:status==="submitted"?(kind==="submit"?now:prev.submittedAt):null,submittedBy:status==="submitted"?(kind==="submit"?S.session.u:prev.submittedBy):null};
   const action={draft:"บันทึกร่าง",submit:isAdmin()?"ส่งข้อมูล (โดย Admin)":"ส่งข้อมูล",admin:wasSub?"Admin แก้ไขข้อมูลที่ส่งแล้ว":"Admin บันทึกข้อมูล",unlock:"Admin ปลดล็อกให้เจ้าหน้าที่แก้ไข"}[kind];
   S.saving=true;S.confirm=null;updateBar();msg.textContent="กำลังบันทึก…";
-  try{await persistMonth(k,doc);delete S.drafts[k];S.saving=false;msg.textContent="";
+  try{await persistMonth(k,doc);delete S.drafts[k];
+    if(doc.v&&doc.v.cogs!=null){if(!S.admin.cogs)S.admin.cogs={};S.admin.cogs[k]=doc.v.cogs;persistAdmin(S.admin).catch(()=>{});}
+    S.saving=false;msg.textContent="";
     await logAudit({action,month:k,changes,reason:(kind==="admin"||kind==="unlock")?reason:""});
     if(kind==="admin"||kind==="unlock")S.reason="";
     renderStrip();renderForm();toast(action+" เดือน "+MSHORT[k]+" แล้ว");}
@@ -561,24 +560,28 @@ async function saveMonth(kind){
 // ---------- admin: carry & cogs ----------
 function invStatus(r){if(r.carryMissing)return `<span class="st-wait">ยังไม่กรอกยอดยกมา</span>`;if(r.cogs==null)return `<span class="st-wait">ยังไม่กรอก</span>`;if(r.end<0)return `<span class="st-bad">คงคลังติดลบ ตรวจสอบ</span>`;return `<span class="st-ok">ปกติ</span>`;}
 function renderAdmin(){
-  const a=adminState(),inv=inventory(true),editable=isAdmin()&&S.canAdmin&&S.mode!=="loading",dis=editable?"":"disabled";
+  const a=adminState(),inv=inventory(true);
+  const canEditCogs=(isAdmin()||role()==="staff")&&S.mode!=="loading";
+  const disCarry=isAdmin()&&S.canAdmin&&S.mode!=="loading"?"":"disabled";
   let h=`<div class="toolbar"><h2>ยอดยกมาและต้นทุนค่ายาสมุนไพร</h2>
    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="msg" id="admMsg"></span>
-   ${editable?`<button class="btn ghost" type="button" id="admRevert" ${S.adminDraft?"":"hidden"}>ยกเลิกการแก้ไข</button>
-   <button class="btn" type="button" id="admSave" disabled>บันทึกข้อมูล Admin</button>`:""}</div></div>`;
-  if(!isAdmin())h+=`<div class="notice">ส่วนนี้ Admin เป็นผู้กรอก บัญชีของคุณดูได้อย่างเดียว</div>`;
+   ${canEditCogs?`<button class="btn ghost" type="button" id="admRevert" ${S.adminDraft?"":"hidden"}>ยกเลิกการแก้ไข</button>
+   <button class="btn" type="button" id="admSave" disabled>${isAdmin()?"บันทึกข้อมูล Admin":"บันทึกต้นทุนค่ายาสมุนไพร"}</button>`:""}</div></div>`;
+  if(!isAdmin()&&role()!=="staff")h+=`<div class="notice">บัญชีของคุณดูได้อย่างเดียว</div>`;
+  else if(!isAdmin())h+=`<div class="notice">คุณสามารถกรอกหรือแก้ไขต้นทุนค่ายาสมุนไพร(คลังเล็ก) รายเดือนได้ หรือกรอกในหน้าแบบฟอร์มรายเดือน (ยอดยกมาต้นปีแก้ไขได้เฉพาะ Admin)</div>`;
   else if(!S.canAdmin&&S.mode!=="loading")h+=`<div class="notice">บัญชี claude.ai ที่ใช้อยู่ต้องมีสิทธิ์ Editor จึงจะบันทึกส่วนนี้ได้</div>`;
   h+=`<div class="carry"><div><h3>ยอดยกมา ณ ต้นเดือนตุลาคม 2569</h3>
-     <p>มูลค่าราคาทุนของยาสมุนไพรคงเหลือในคลังเล็ก ยกมาจากปีงบประมาณ 2569 กรอกครั้งเดียวต้นปี เดือนถัดไปยกมาอัตโนมัติ</p></div>
-     <div class="cell"><input id="carryIn" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(a.carry)}" aria-label="ยอดยกมา ณ ต้นเดือนตุลาคม 2569" ${dis}><span class="echo" id="carryEcho"></span></div></div>`;
-  h+=`<div class="tw"><table class="t"><thead><tr><th>เดือน</th><th>ยอดยาคงคลังยกมา</th><th>บวก ค่ายาสมุนไพร<br>ที่ซื้อในเดือนนี้</th><th>${esc(COGS_LABEL)}<br>(Admin กรอก)</th><th>ยอดยาคงคลัง<br>คงเหลือยกไป</th><th>สถานะ</th></tr></thead><tbody>`;
+     <p>มูลค่าราคาทุนของยาสมุนไพรคงเหลือในคลังเล็ก ยกมาจากปีงบประมาณ 2569 กรอกครั้งเดียวต้นปี เดือนถัดไปยกมาอัตโนมัติ (เฉพาะ Admin)</p></div>
+     <div class="cell"><input id="carryIn" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(a.carry)}" aria-label="ยอดยกมา ณ ต้นเดือนตุลาคม 2569" ${disCarry}><span class="echo" id="carryEcho"></span></div></div>`;
+  h+=`<div class="tw"><table class="t"><thead><tr><th>เดือน</th><th>ยอดยาคงคลังยกมา</th><th>บวก ค่ายาสมุนไพร<br>ที่ซื้อในเดือนนี้</th><th>${esc(COGS_LABEL)}<br>(กรอกได้ทุกสิทธิ์)</th><th>ยอดยาคงคลัง<br>คงเหลือยกไป</th><th>สถานะ</th></tr></thead><tbody>`;
   inv.forEach((r,i)=>{const m=MONTHS[i];
+    const disMonth = (canEditCogs && canEditMonth(m.key)) ? "" : "disabled";
     h+=`<tr data-row="${m.key}"><td class="c">${esc(m.short)}</td><td class="r" data-a="begin">${r.carryMissing?"–":fmt(r.begin)}</td><td class="r">${fmt(r.purchase)}</td>
-     <td class="inp"><input data-cogs="${m.key}" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(a.cogs[m.key]||"")}" aria-label="${esc(COGS_LABEL+" "+m.full)}" ${dis}></td>
+     <td class="inp"><input data-cogs="${m.key}" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(a.cogs[m.key]||"")}" aria-label="${esc(COGS_LABEL+" "+m.full)}" ${disMonth}></td>
      <td class="r ${r.end<0?"neg":""}" data-a="end">${fmt(r.end)}</td><td class="c" data-a="st">${invStatus(r)}</td></tr>`;});
   const tb=inv.reduce((s,r)=>s+r.purchase,0);
   h+=`</tbody><tfoot><tr class="tot"><td class="c">รวมทั้งปี</td><td class="r" id="tBegin">${inv[0].carryMissing?"–":fmt(inv[0].begin)}</td><td class="r">${fmt(tb)}</td><td class="r" id="tCogs">0.00</td><td class="r" id="tEnd">0.00</td><td></td></tr></tfoot></table></div>`;
-  if(editable)h+=`<label class="admnote">หมายเหตุการแก้ไข (บันทึกลงประวัติ)<input id="admNoteIn" value="${esc(S.adminNote)}" placeholder="เช่น ปรับต้นทุนตามผลตรวจนับคลัง"></label>`;
+  if(isAdmin())h+=`<label class="admnote">หมายเหตุการแก้ไข (บันทึกลงประวัติ)<input id="admNoteIn" value="${esc(S.adminNote)}" placeholder="เช่น ปรับต้นทุนตามผลตรวจนับคลัง"></label>`;
   h+=`<p class="ref">อ้างอิงปีงบ 2569 จากรายงานเดิม: ซื้อยาสมุนไพรทั้งปี 6,392,275.00 บาท และต้นทุนยาที่ขายทั้งปี 6,021,500.60 บาท · ยอดคงเหลือ ณ ก.ย.70 ใช้เป็นยอดยกมาของปีงบ 2571</p>`;
   $("#v-admin").innerHTML=h;updateAdminDerived();
 }
@@ -594,16 +597,28 @@ function updateAdminDerived(){
   const sb=$("#admSave"),rb=$("#admRevert");if(sb){sb.disabled=!S.adminDraft||S.saving;rb.hidden=!S.adminDraft;}
 }
 async function saveAdmin(){
-  const a=S.adminDraft;if(!a||!isAdmin())return;const msg=$("#admMsg");
-  const cr=evalExpr(a.carry);if(!cr.ok||(cr.value!=null&&cr.value<0)){msg.className="msg err";msg.textContent="ยอดยกมาไม่ถูกต้อง";return;}
+  const a=S.adminDraft;if(!a)return;const msg=$("#admMsg");
+  const isAdm=isAdmin();
+  const cr=isAdm?evalExpr(a.carry):{ok:true,value:typeof S.admin.carry==="number"?S.admin.carry:null};
+  if(!cr.ok||(cr.value!=null&&cr.value<0)){msg.className="msg err";msg.textContent="ยอดยกมาไม่ถูกต้อง";return;}
   const cogs={},changes=[];
   for(const m of MONTHS){const r=evalExpr(a.cogs[m.key]);if(!r.ok||(r.value!=null&&r.value<0)){msg.className="msg err";msg.textContent="ต้นทุนเดือน "+m.short+" ไม่ถูกต้อง";return;}
-    if(r.value!=null)cogs[m.key]=r.value;const p=cogsSaved(m.key);if((p==null?null:p)!==(r.value==null?null:r.value))changes.push({f:"cogs",label:"ต้นทุนยาที่ขาย "+m.short,from:p||0,to:r.value||0});}
-  const pc=typeof S.admin.carry==="number"?S.admin.carry:null;if(pc!==(cr.value==null?null:cr.value))changes.unshift({f:"carry",label:"ยอดยกมา ณ ต้นเดือนตุลาคม 2569",from:pc||0,to:cr.value||0});
+    if(r.value!=null)cogs[m.key]=r.value;const p=cogsSaved(m.key);if((p==null?null:p)!==(r.value==null?null:r.value))changes.push({f:"cogs",label:COGS_LABEL+" "+m.short,from:p||0,to:r.value||0});}
+  const pc=typeof S.admin.carry==="number"?S.admin.carry:null;if(isAdm&&pc!==(cr.value==null?null:cr.value))changes.unshift({f:"carry",label:"ยอดยกมา ณ ต้นเดือนตุลาคม 2569",from:pc||0,to:cr.value||0});
   S.saving=true;updateAdminDerived();msg.className="msg";msg.textContent="กำลังบันทึก…";
   try{await persistAdmin({carry:cr.value,cogs,updatedAt:new Date().toISOString(),updatedBy:S.session.u});
-    await logAudit({action:"Admin แก้ไขยอดยกมา/ต้นทุนยา",month:"",changes,reason:S.adminNote.trim()});
-    S.adminDraft=null;S.adminNote="";S.saving=false;renderAdmin();toast("บันทึกข้อมูล Admin แล้ว");}
+    for(const m of MONTHS){
+      if(cogs[m.key]!=null){
+        const curM=S.months[m.key]||{v:{},x:{},status:"draft"};
+        curM.v=curM.v||{};
+        if(curM.v.cogs!==cogs[m.key]){
+          curM.v.cogs=cogs[m.key];
+          await persistMonth(m.key,curM);
+        }
+      }
+    }
+    await logAudit({action:(isAdm?"Admin ":"เจ้าหน้าที่ ")+"แก้ไขต้นทุนยา/ยอดยกมา",month:"",changes,reason:S.adminNote.trim()});
+    S.adminDraft=null;S.adminNote="";S.saving=false;renderAdmin();toast("บันทึกข้อมูลต้นทุนยาแล้ว");}
   catch(e){S.saving=false;msg.className="msg err";msg.textContent=errText(e);updateAdminDerived();}
 }
 
@@ -706,7 +721,7 @@ function reportRows(key){
   add("รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)","revHerb");add("กำไรรวมจากการให้บริการ (ยาสมุนไพร)","profHerb");
   add("รวมรายรับทั้งหมด","rev");rows.push([]);
   rows.push(["รายการรายจ่าย","จำนวนเงิน (บาท)","รวมจ่ายตั้งแต่ต้นปี"]);
-  EXP.forEach(g=>{head(g.title);g.items.forEach(([f,l])=>add(l,f));g.calcs.forEach(([l,k])=>add(l,k));if(g.admin)add(COGS_LABEL,"cogs");(g.after||[]).forEach(([f,l])=>add(l,f));});
+  EXP.forEach(g=>{head(g.title);g.items.forEach(([f,l])=>add(l,f));g.calcs.forEach(([l,k])=>add(l,k));(g.after||[]).forEach(([f,l])=>add(l,f));});
   add("รวมรายจ่ายทั้งหมด","exp");add("กำไรสุทธิหลังหักค่าใช้จ่าย","net");rows.push([]);
   rows.push(["สรุปมูลค่ายาสมุนไพรคงคลัง (ราคาทุน)",null,null]);
   rows.push(["ยอดยาคงคลังยกมา",inv.begin,null]);rows.push(["บวก ค่ายาสมุนไพรที่ซื้อในเดือนนี้",inv.purchase,null]);
