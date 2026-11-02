@@ -125,6 +125,43 @@ table.t td.inp input{width:100%;min-width:130px;border:1px solid var(--admin-lin
 table.t td.inp input.bad{border-color:var(--bad)}
 .st-ok{color:var(--good)} .st-bad{color:var(--bad);font-weight:700} .st-wait{color:var(--muted)}
 
+.rep-sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin-top:16px;box-shadow:var(--shadow)}
+.rep-header{text-align:center;margin-bottom:18px}
+.rep-header h2{margin:0;font-size:1.4rem;font-weight:700}
+.rep-header h3{margin:4px 0;font-size:1.18rem;font-weight:600}
+.rep-header h4{margin:4px 0 0;font-size:1.1rem;font-weight:600;color:var(--herb)}
+table.rep-t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem;margin-bottom:20px}
+table.rep-t th,table.rep-t td{border:1px solid var(--line);padding:5px 8px;line-height:1.35}
+table.rep-t th.th-green{background:#DCE8D6;color:#1C2A20;font-weight:700;text-align:center}
+table.rep-t td.sec-peach{background:#FCE4D6;color:#5A2B12;font-weight:700}
+table.rep-t td.tot-green{background:#DCE8D6;color:#1C2A20;font-weight:700}
+table.rep-t td.banner-yellow{background:#FFF2CC;color:#3F2D06;font-weight:700}
+table.rep-t td.sub-lbl{padding-left:18px;color:var(--muted)}
+table.rep-t td.r{text-align:right;white-space:nowrap}
+table.rep-t td.c{text-align:center}
+table.rep-t td.b{font-weight:700}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) table.rep-t th.th-green{background:#1E3022;color:#D6E8D8}
+  :root:not([data-theme="light"]) table.rep-t td.sec-peach{background:#3A2418;color:#FADCCB}
+  :root:not([data-theme="light"]) table.rep-t td.tot-green{background:#1E3022;color:#D6E8D8}
+  :root:not([data-theme="light"]) table.rep-t td.banner-yellow{background:#352D12;color:#FCF0C8}
+}
+:root[data-theme="dark"] table.rep-t th.th-green{background:#1E3022;color:#D6E8D8}
+:root[data-theme="dark"] table.rep-t td.sec-peach{background:#3A2418;color:#FADCCB}
+:root[data-theme="dark"] table.rep-t td.tot-green{background:#1E3022;color:#D6E8D8}
+:root[data-theme="dark"] table.rep-t td.banner-yellow{background:#352D12;color:#FCF0C8}
+@media print{
+  body{background:#fff!important;color:#000!important}
+  header.top,nav.tabs,.toolbar,#bar,#toast,.strip{display:none!important}
+  .panel,.rep-sheet{border:none!important;box-shadow:none!important;padding:0!important;margin:0!important}
+  table.rep-t th,table.rep-t td{border-color:#000!important;color:#000!important}
+  table.rep-t th.th-green{background:#e8ede6!important}
+  table.rep-t td.sec-peach{background:#faebd7!important}
+  table.rep-t td.tot-green{background:#e8ede6!important}
+  table.rep-t td.banner-yellow{background:#fef9e7!important}
+  @page{size:landscape;margin:1cm}
+}
+
 .carry{display:grid;grid-template-columns:1fr minmax(200px,280px);gap:14px 24px;align-items:center;background:var(--admin);border:1px solid var(--admin-line);border-radius:12px;padding:16px 18px;margin-bottom:20px;color:var(--admin-ink)}
 @media (max-width:640px){.carry{grid-template-columns:1fr}}
 .carry h3{margin:0;font-size:1.2rem}
@@ -208,10 +245,11 @@ table.t td.l{text-align:left}
   <div id="app" hidden>
     <nav class="tabs" aria-label="ส่วนของแบบฟอร์ม">
       <a href="#form" data-view="form">กรอกข้อมูลรายเดือน</a>
+      <a href="#report" data-view="report">หน้ารายงานประจำเดือน</a>
+      <a href="#summary" data-view="summary">สรุปทั้งปี</a>
       <a href="#admin" data-view="admin">ยอดยกมาและต้นทุนยา</a>
       <a href="#users" data-view="users" data-adminonly>ผู้ใช้งาน</a>
       <a href="#history" data-view="history" data-adminonly>ประวัติการแก้ไข</a>
-      <a href="#summary" data-view="summary">สรุปทั้งปี</a>
     </nav>
 
     <section class="panel" id="v-form">
@@ -226,6 +264,7 @@ table.t td.l{text-align:left}
         <div class="side" id="expSide"></div>
       </div>
     </section>
+    <section class="panel" id="v-report" hidden></section>
     <section class="panel" id="v-admin" hidden></section>
     <section class="panel" id="v-users" hidden></section>
     <section class="panel" id="v-history" hidden></section>
@@ -442,12 +481,12 @@ function renderShell(){
   if(on)showView(location.hash.slice(1)||S.view);else $("#bar").hidden=true;
 }
 function showView(v){
-  const ok=["form","admin","summary"].concat(isAdmin()?["users","history"]:[]);
+  const ok=["form","report","admin","summary"].concat(isAdmin()?["users","history"]:[]);
   if(!ok.includes(v))v="form";S.view=v;
   document.querySelectorAll("nav.tabs a").forEach(a=>a.setAttribute("aria-current",a.dataset.view===v?"page":"false"));
-  ["form","admin","users","history","summary"].forEach(x=>$("#v-"+x).hidden=x!==v);
+  ["form","report","admin","users","history","summary"].forEach(x=>$("#v-"+x).hidden=x!==v);
   $("#bar").hidden=v!=="form"||!S.session;
-  if(v==="form"){renderStrip();renderForm();}if(v==="admin")renderAdmin();if(v==="users")renderUsers();if(v==="history")renderHistory();if(v==="summary")renderSummary();
+  if(v==="form"){renderStrip();renderForm();}if(v==="report")renderReport();if(v==="admin")renderAdmin();if(v==="users")renderUsers();if(v==="history")renderHistory();if(v==="summary")renderSummary();
 }
 window.addEventListener("hashchange",()=>{if(S.session)showView(location.hash.slice(1));});
 
@@ -707,26 +746,379 @@ function renderSummary(){
    <p class="ref">ไฟล์ Excel ที่ดาวน์โหลดมีรายงานประจำเดือนครบ 12 เดือน (เดือนนี้และสะสมตั้งแต่ต้นปี) พร้อมตารางยาคงคลังและสรุปทั้งปี</p>`;
   $("#v-summary").innerHTML=h;
 }
-function reportRows(key){
-  const c=compute(key),cum=f=>cumulative(key,f),inv=inventory(false).find(x=>x.key===key),rows=[];
-  const add=(l,f)=>rows.push([l,c[f],cum(f)]);const head=l=>rows.push([l,null,null]);
-  head("รายได้จากการบริการ (หัตถการทางการแพทย์แผนไทยฯ)");
-  add("1. ค่าบริการนวดประคบเพื่อรักษา","r1");add("    - กำไรค่าบริการนวดประคบเพื่อรักษา","p1");
-  add("2. ค่าบริการอบไอน้ำสมุนไพร","r2");add("    - กำไรค่าบริการอบไอน้ำสมุนไพร","p2");
-  add("3. ค่าบริการดูแลมารดาหลังคลอด","r3");add("    - กำไรค่าบริการดูแลมารดาหลังคลอด","p3");
-  add("รวมรายรับจากการให้บริการไม่หักทุน (หัตถการ)","revProc");add("กำไรรวมจากการให้บริการ (หัตถการ)","profProc");
-  head("รายได้จากการบริการ (ยาสมุนไพร)");
-  add("4. มูลค่าจำหน่ายยาสมุนไพรสำเร็จรูป","r4");add("    - กำไรการจำหน่ายยาสมุนไพร","p4");
-  add("5. มูลค่าจำหน่ายยาปรุงเฉพาะรายสมุนไพร","r5");add("    - กำไรจากการจำหน่ายยาปรุงเฉพาะราย","p5");
-  add("รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)","revHerb");add("กำไรรวมจากการให้บริการ (ยาสมุนไพร)","profHerb");
-  add("รวมรายรับทั้งหมด","rev");rows.push([]);
-  rows.push(["รายการรายจ่าย","จำนวนเงิน (บาท)","รวมจ่ายตั้งแต่ต้นปี"]);
-  EXP.forEach(g=>{head(g.title);g.items.forEach(([f,l])=>add(l,f));g.calcs.forEach(([l,k])=>add(l,k));(g.after||[]).forEach(([f,l])=>add(l,f));});
-  add("รวมรายจ่ายทั้งหมด","exp");add("กำไรสุทธิหลังหักค่าใช้จ่าย","net");rows.push([]);
-  rows.push(["สรุปมูลค่ายาสมุนไพรคงคลัง (ราคาทุน)",null,null]);
-  rows.push(["ยอดยาคงคลังยกมา",inv.begin,null]);rows.push(["บวก ค่ายาสมุนไพรที่ซื้อในเดือนนี้",inv.purchase,null]);
-  rows.push(["หัก "+COGS_LABEL,inv.cogs||0,null]);rows.push(["ยอดยาคงคลังคงเหลือยกไป",inv.end,null]);
-  return rows;
+function renderReport(){
+  const curKey=S.curMonthReport||S.cur;
+  const m=MONTHS.find(x=>x.key===curKey)||MONTHS[0];
+  const v=valuesFor(curKey);
+  const c=compute(curKey);
+  const cum=f=>cumulative(curKey,f);
+
+  let h=`<div class="toolbar" style="flex-wrap:wrap;gap:12px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">หน้ารายงานประจำเดือน</h2>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:1rem">
+        เลือกเดือน:
+        <select id="repMonthSel" style="padding:6px 12px;font-size:1rem;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:inherit">
+          ${MONTHS.map(x=>`<option value="${x.key}" ${x.key===curKey?"selected":""}>${esc(x.full)} (${stLabel(x.key)})</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="msg" id="repDlMsg"></span>
+      <button class="btn" type="button" id="repDlMonthBtn" ${(S.downloads||S.standalone)&&window.XLSX?"":"hidden"}>ดาวน์โหลด Excel (เดือนนี้)</button>
+      <button class="btn ghost" type="button" id="repDlAllBtn" ${(S.downloads||S.standalone)&&window.XLSX?"":"hidden"}>ดาวน์โหลด Excel (ทั้งปี)</button>
+      <button class="btn ghost" type="button" id="repPrintBtn" onclick="window.print()">พิมพ์รายงาน</button>
+    </div>
+  </div>
+
+  <div class="rep-sheet">
+    <div class="rep-header">
+      <h2>รายงานผลการดำเนินงาน ปีงบประมาณ 2570</h2>
+      <h3>ศูนย์ส่งเสริมสุขภาพแผนไทย "กมลาศรม" สำนักงานสาธารณสุขจังหวัดพิษณุโลก</h3>
+      <h4>ประจำเดือน ${esc(m.full)}</h4>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="rep-t">
+        <thead>
+          <tr>
+            <th class="th-green" style="width:34%">รายการรายรับจากการบริการ<br><small style="font-weight:400">รายรับใน+นอกเวลาราชการ</small></th>
+            <th class="th-green" style="width:11%">จำนวนเงิน (บาท)</th>
+            <th class="th-green" style="width:12%">รวมรับตั้งแต่ต้นปี</th>
+            <th class="th-green" style="width:43%">รายการ<br><small style="font-weight:400">รายจ่ายประจำเดือน</small></th>
+            <th class="th-green" style="width:11%">จำนวนเงิน (บาท)</th>
+            <th class="th-green" style="width:12%">รวมจ่ายตั้งแต่ต้นปี</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="3" class="sec-peach">รายได้จากการบริการ (หัตถการทางการแพทย์แผนไทยฯ)</td>
+            <td>1. ค่าจ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน) จำนวน 1 คน</td>
+            <td class="r">${fmt(v.e1)}</td>
+            <td class="r">${fmt(cum("e1"))}</td>
+          </tr>
+          <tr>
+            <td>1. ค่าบริการนวดประคบเพื่อรักษา</td>
+            <td class="r">${fmt(v.r1)}</td>
+            <td class="r">${fmt(cum("r1"))}</td>
+            <td>2. ค่าถ่ายเอกสาร</td>
+            <td class="r">${fmt(v.e2)}</td>
+            <td class="r">${fmt(cum("e2"))}</td>
+          </tr>
+          <tr>
+            <td class="sub-lbl">- กำไรค่าบริการนวดประคบเพื่อรักษา</td>
+            <td class="r">${fmt(c.p1)}</td>
+            <td class="r">${fmt(cum("p1"))}</td>
+            <td>3. ค่าวัสดุครุภัณฑ์ให้บริการอื่นๆ</td>
+            <td class="r">${fmt(v.e3)}</td>
+            <td class="r">${fmt(cum("e3"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td class="tot-green">รวมต้นทุนการจัดบริการอื่นๆ</td>
+            <td class="r tot-green">${fmt(c.other)}</td>
+            <td class="r tot-green">${fmt(cum("other"))}</td>
+          </tr>
+          <tr>
+            <td>2. ค่าบริการอบไอน้ำสมุนไพร</td>
+            <td class="r">${fmt(v.r2)}</td>
+            <td class="r">${fmt(cum("r2"))}</td>
+            <td colspan="3" class="sec-peach">รายจ่ายจากบริการยาสมุนไพร</td>
+          </tr>
+          <tr>
+            <td class="sub-lbl">- กำไรค่าบริการอบไอน้ำสมุนไพร</td>
+            <td class="r">${fmt(c.p2)}</td>
+            <td class="r">${fmt(cum("p2"))}</td>
+            <td>4. ค่ายาสมุนไพรจาก รพ.บางกระทุ่ม-รพ.บ้านตาก</td>
+            <td class="r">${fmt(v.e4)}</td>
+            <td class="r">${fmt(cum("e4"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td>5. ค่ายาบริษัทบางกอกดรัก (ไพลวาน่า)</td>
+            <td class="r">${fmt(v.e5)}</td>
+            <td class="r">${fmt(cum("e5"))}</td>
+          </tr>
+          <tr>
+            <td>3. ค่าบริการดูแลมารดาหลังคลอด</td>
+            <td class="r">${fmt(v.r3)}</td>
+            <td class="r">${fmt(cum("r3"))}</td>
+            <td>6. ค่ายาองค์การเภสัช (ยาอมมะแว้ง)</td>
+            <td class="r">${fmt(v.e6)}</td>
+            <td class="r">${fmt(cum("e6"))}</td>
+          </tr>
+          <tr>
+            <td class="sub-lbl">- กำไรค่าบริการดูแลมารดาหลังคลอด</td>
+            <td class="r">${fmt(c.p3)}</td>
+            <td class="r">${fmt(cum("p3"))}</td>
+            <td>7. ค่ายาอภัยภูเบศร (สเปรย์กระดูกไก่ดำ)</td>
+            <td class="r">${fmt(v.e7)}</td>
+            <td class="r">${fmt(cum("e7"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td class="sub-lbl">ค่ายาสมุนไพรที่ซื้อในเดือนนี้</td>
+            <td class="r">${fmt(c.purchase)}</td>
+            <td class="r">${fmt(cum("purchase"))}</td>
+          </tr>
+          <tr>
+            <td class="b">รวมรายรับจากการให้บริการไม่หักทุน (หัตถการ)</td>
+            <td class="r b">${fmt(c.revProc)}</td>
+            <td class="r b">${fmt(cum("revProc"))}</td>
+            <td>${esc(COGS_LABEL)}</td>
+            <td class="r">${fmt(c.cogs)}</td>
+            <td class="r">${fmt(cum("cogs"))}</td>
+          </tr>
+          <tr>
+            <td class="b">กำไรรวมจากการให้บริการ (หัตถการ)</td>
+            <td class="r b">${fmt(c.profProc)}</td>
+            <td class="r b">${fmt(cum("profProc"))}</td>
+            <td>8. ต้นทุนค่ายาปรุงเฉพาะรายสมุนไพร</td>
+            <td class="r">${fmt(v.e8)}</td>
+            <td class="r">${fmt(cum("e8"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td class="tot-green">รวมค่าใช้จ่าย</td>
+            <td class="r tot-green">${fmt(c.purchase)}</td>
+            <td class="r tot-green">${fmt(cum("purchase"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td colspan="3" class="sec-peach">รายจ่ายจากบริการด้านหัตถการ</td>
+          </tr>
+          <tr>
+            <td colspan="3" class="sec-peach">รายได้จากการบริการ (ยาสมุนไพร)</td>
+            <td>9. ค่าจ้างผู้ช่วยแพทย์แผนไทย</td>
+            <td class="r">${fmt(v.e9)}</td>
+            <td class="r">${fmt(cum("e9"))}</td>
+          </tr>
+          <tr>
+            <td>4. มูลค่าจำหน่ายยาสมุนไพรสำเร็จรูป</td>
+            <td class="r">${fmt(v.r4)}</td>
+            <td class="r">${fmt(cum("r4"))}</td>
+            <td>10. ต้นทุนบริการอบสมุนไพร</td>
+            <td class="r">${fmt(v.e10)}</td>
+            <td class="r">${fmt(cum("e10"))}</td>
+          </tr>
+          <tr>
+            <td class="sub-lbl">- กำไรการจำหน่ายยาสมุนไพร</td>
+            <td class="r">${fmt(c.p4)}</td>
+            <td class="r">${fmt(cum("p4"))}</td>
+            <td>11. ต้นทุนบริการการดูแลมารดาหลังคลอด</td>
+            <td class="r">${fmt(v.e11)}</td>
+            <td class="r">${fmt(cum("e11"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td class="tot-green">รวมค่าใช้จ่าย</td>
+            <td class="r tot-green">${fmt(c.proc)}</td>
+            <td class="r tot-green">${fmt(cum("proc"))}</td>
+          </tr>
+          <tr>
+            <td>5. มูลค่าจำหน่ายยาปรุงเฉพาะรายสมุนไพร</td>
+            <td class="r">${fmt(v.r5)}</td>
+            <td class="r">${fmt(cum("r5"))}</td>
+            <td colspan="3" class="sec-peach">ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ</td>
+          </tr>
+          <tr>
+            <td class="sub-lbl">- กำไรจากการจำหน่ายยาปรุงเฉพาะราย</td>
+            <td class="r">${fmt(c.p5)}</td>
+            <td class="r">${fmt(cum("p5"))}</td>
+            <td>12. ค่า OT เจ้าหน้าที่ (วันจันทร์ - ศุกร์)</td>
+            <td class="r">${fmt(v.e12)}</td>
+            <td class="r">${fmt(cum("e12"))}</td>
+          </tr>
+          <tr>
+            <td class="b">รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)</td>
+            <td class="r b">${fmt(c.revHerb)}</td>
+            <td class="r b">${fmt(cum("revHerb"))}</td>
+            <td>13. ค่า OT จ้างเหมาบริการ (วันจันทร์ - ศุกร์)</td>
+            <td class="r">${fmt(v.e13)}</td>
+            <td class="r">${fmt(cum("e13"))}</td>
+          </tr>
+          <tr>
+            <td class="b">กำไรรวมจากการให้บริการ (ยาสมุนไพร)</td>
+            <td class="r b">${fmt(c.profHerb)}</td>
+            <td class="r b">${fmt(cum("profHerb"))}</td>
+            <td>14. ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)</td>
+            <td class="r">${fmt(v.e14)}</td>
+            <td class="r">${fmt(cum("e14"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td>15. ค่า OT จ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน เสาร์-อาทิตย์)</td>
+            <td class="r">${fmt(v.e15)}</td>
+            <td class="r">${fmt(cum("e15"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td>16. ค่า OT พนักงานทำความสะอาด</td>
+            <td class="r">${fmt(v.e16)}</td>
+            <td class="r">${fmt(cum("e16"))}</td>
+          </tr>
+          <tr>
+            <td></td><td></td><td></td>
+            <td class="tot-green">รวมค่าใช้จ่าย</td>
+            <td class="r tot-green">${fmt(c.ot)}</td>
+            <td class="r tot-green">${fmt(cum("ot"))}</td>
+          </tr>
+          <tr>
+            <td class="tot-green b">รวมรายรับทั้งหมด</td>
+            <td class="r tot-green b">${fmt(c.rev)}</td>
+            <td class="r tot-green b">${fmt(cum("rev"))}</td>
+            <td class="tot-green b">รวมรายจ่ายทั้งหมด</td>
+            <td class="r tot-green b">${fmt(c.exp)}</td>
+            <td class="r tot-green b">${fmt(cum("exp"))}</td>
+          </tr>
+          <tr>
+            <td class="banner-yellow b">กำไรสุทธิหลังหักค่าใช้จ่าย (รายเดือน)</td>
+            <td class="r banner-yellow b" colspan="2" style="font-size:1.05rem">${fmt(c.net)}</td>
+            <td class="banner-yellow b">รายได้สะสมตลอดปีหลังหักค่าใช้จ่ายสุทธิ</td>
+            <td class="r banner-yellow b" colspan="2" style="font-size:1.05rem">${fmt(cum("net"))}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="overflow-x:auto;margin-top:28px">
+      <table class="rep-t" style="max-width:880px">
+        <thead>
+          <tr>
+            <th class="th-green" style="width:36%">การจัดบริการด้านแพทย์แผนไทย</th>
+            <th class="th-green" style="width:18%">ด้านหัตถการ<br>ทางการแพทย์แผนไทยฯ</th>
+            <th class="th-green" style="width:18%">ยาสมุนไพร<br>สำเร็จและยาปรุงเฉพาะราย</th>
+            <th class="th-green" style="width:28%">รายได้สะสมปีงบ 2570 (ต.ค.69 - ${esc(m.short)})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sec-peach">รายได้</td>
+            <td class="r">${fmt(c.revProc)}</td>
+            <td class="r">${fmt(c.revHerb)}</td>
+            <td class="r b">${fmt(cum("rev"))}</td>
+          </tr>
+          <tr>
+            <td>ต้นทุน</td>
+            <td class="r">${fmt(c.proc)}</td>
+            <td class="r">${fmt(c.cogs)}</td>
+            <td class="r b">${fmt(cum("exp"))}</td>
+          </tr>
+          <tr>
+            <td class="tot-green">กำไร</td>
+            <td class="r tot-green">${fmt(c.profProc)}</td>
+            <td class="r tot-green">${fmt(c.profHerb)}</td>
+            <td class="r tot-green b">${fmt(cum("net"))}</td>
+          </tr>
+          <tr>
+            <td>ต้นทุนการจัดบริการอื่นๆ</td>
+            <td class="r" colspan="2">${fmt(c.other)}</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ</td>
+            <td class="r" colspan="2">${fmt(c.ot)}</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="banner-yellow b">กำไรหลังหักค่าใช้จ่ายอื่นๆ</td>
+            <td class="r banner-yellow b" colspan="2" style="font-size:1.05rem">${fmt(c.net)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+  $("#v-report").innerHTML=h;
+}
+function buildMonthSheet(key){
+  const m=MONTHS.find(x=>x.key===key)||MONTHS[0];
+  const v=valuesFor(key);
+  const c=compute(key);
+  const cum=f=>cumulative(key,f);
+
+  const aoa=[
+    ["รายงานผลการดำเนินงาน  ปีงบประมาณ  2570",null,null,null,null,null],
+    ['ศูนย์ส่งเสริมสุขภาพแผนไทย  "กมลาศรม"  สำนักงานสาธารณสุขจังหวัดพิษณุโลก',null,null,null,null,null],
+    ["ประจำเดือน "+m.full,null,null,null,null,null],
+    ["รายการรายรับจากการบริการ","จำนวนเงิน (บาท)","รวมรับตั้งแต่ต้นปี","รายการ","จำนวนเงิน (บาท)","รวมจ่ายตั้งแต่ต้นปี"],
+    ["รายรับใน+นอกเวลาราชการ",null,null,"รายจ่ายประจำเดือน",null,null],
+    ["รายได้จากการบริการ (หัตถการทางการแพทย์แผนไทยฯ)",null,null,"1.  ค่าจ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน) จำนวน 1 คน",v.e1,cum("e1")],
+    ["1.  ค่าบริการนวดประคบเพื่อรักษา",v.r1,cum("r1"),"2.  ค่าถ่ายเอกสาร",v.e2,cum("e2")],
+    ["    - กำไรค่าบริการนวดประคบเพื่อรักษา",c.p1,cum("p1"),"3. ค่าวัสดุครุภัณฑ์ให้บริการอื่นๆ",v.e3,cum("e3")],
+    [null,null,null,"รวมต้นทุนการจัดบริการอื่นๆ",c.other,cum("other")],
+    ["2.  ค่าบริการอบไอน้ำสมุนไพร",v.r2,cum("r2"),"รายจ่ายจากบริการยาสมุนไพร",null,null],
+    ["    - กำไรค่าบริการอบไอน้ำสมุนไพร",c.p2,cum("p2"),"4.  ค่ายาสมุนไพรจาก รพ.บางกระทุ่ม-รพ.บ้านตาก",v.e4,cum("e4")],
+    [null,null,null,"5.  ค่ายาบริษัทบางกอกดรัก (ไพลวาน่า)",v.e5,cum("e5")],
+    ["3.  ค่าบริการดูแลมารดาหลังคลอด",v.r3,cum("r3"),"6.  ค่ายาองค์การเภสัช (ยาอมมะแว้ง)",v.e6,cum("e6")],
+    ["    - กำไรค่าบริการดูแลมารดาหลังคลอด",c.p3,cum("p3"),"7. ค่ายาอภัยภูเบศร (สเปรย์กระดูกไก่ดำ)",v.e7,cum("e7")],
+    [null,null,null,"    ค่ายาสมุนไพรที่ซื้อในเดือนนี้",c.purchase,cum("purchase")],
+    ["รวมรายรับจากการให้บริการไม่หักทุน (หัตถการ)",c.revProc,cum("revProc"),COGS_LABEL,c.cogs,cum("cogs")],
+    ["กำไรรวมจากการให้บริการ (หัตถการ)",c.profProc,cum("profProc"),"8.  ต้นทุนค่ายาปรุงเฉพาะรายสมุนไพร",v.e8,cum("e8")],
+    [null,null,null,"รวมค่าใช้จ่าย",c.purchase,cum("purchase")],
+    [null,null,null,"รายจ่ายจากบริการด้านหัตถการ",null,null],
+    ["รายได้จากการบริการ (ยาสมุนไพร)",null,null,"9.  ค่าจ้างผู้ช่วยแพทย์แผนไทย",v.e9,cum("e9")],
+    ["4.  มูลค่าจำหน่ายยาสมุนไพรสำเร็จรูป",v.r4,cum("r4"),"10. ต้นทุนบริการอบสมุนไพร",v.e10,cum("e10")],
+    ["    - กำไรการจำหน่ายยาสมุนไพร",c.p4,cum("p4"),"11. ต้นทุนบริการการดูแลมารดาหลังคลอด",v.e11,cum("e11")],
+    [null,null,null,"รวมค่าใช้จ่าย",c.proc,cum("proc")],
+    ["5. มูลค่าจำหน่ายยาปรุงเฉพาะรายสมุนไพร",v.r5,cum("r5"),"ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ",null,null],
+    ["    - กำไรจากการจำหน่ายยาปรุงเฉพาะราย",c.p5,cum("p5"),"12.  ค่า OT เจ้าหน้าที่ (วันจันทร์ - ศุกร์)",v.e12,cum("e12")],
+    ["รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)",c.revHerb,cum("revHerb"),"13.  ค่า OT จ้างเหมาบริการ (วันจันทร์ - ศุกร์)",v.e13,cum("e13")],
+    ["กำไรรวมจากการให้บริการ (ยาสมุนไพร)",c.profHerb,cum("profHerb"),"14.  ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)",v.e14,cum("e14")],
+    [null,null,null,"15.  ค่า OT จ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน เสาร์-อาทิตย์)",v.e15,cum("e15")],
+    [null,null,null,"16.  ค่า OT พนักงานทำความสะอาด",v.e16,cum("e16")],
+    [null,null,null,"รวมค่าใช้จ่าย",c.ot,cum("ot")],
+    ["รวมรายรับทั้งหมด",c.rev,cum("rev"),"รวมรายจ่ายทั้งหมด",c.exp,cum("exp")],
+    ["กำไรสุทธิหลังหักค่าใช้จ่าย (รายเดือน)",c.net,null,"รายได้สะสมตลอดปีหลังหักค่าใช้จ่ายสุทธิ",cum("net"),null],
+    [null,null,null,null,null,null],
+    [null,null,null,null,null,null],
+    [null,null,null,null,null,null],
+    [null,null,null,null,null,null],
+    ["การจัดบริการด้านแพทย์แผนไทย","ด้านหัตถการทางการแพทย์แผนไทยฯ","ยาสมุนไพรสำเร็จและยาปรุงเฉพาะราย","รายได้สะสมปีงบ 2570 (ต.ค.69 - "+m.short+")",null,null],
+    ["รายได้",c.revProc,c.revHerb,cum("rev"),null,null],
+    ["ต้นทุน",c.proc,c.cogs,cum("exp"),null,null],
+    ["กำไร",c.profProc,c.profHerb,cum("net"),null,null],
+    ["ต้นทุนการจัดบริการอื่นๆ",c.other,null,null,null,null],
+    ["ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ",c.ot,null,null,null,null],
+    ["กำไรหลังหักค่าใช้จ่ายอื่นๆ",c.net,null,null,null,null]
+  ];
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:42},{wch:16},{wch:18},{wch:62},{wch:18},{wch:20}];
+  ws["!merges"]=[
+    {s:{r:0,c:0},e:{r:0,c:5}},
+    {s:{r:1,c:0},e:{r:1,c:5}},
+    {s:{r:2,c:0},e:{r:2,c:5}},
+    {s:{r:3,c:1},e:{r:4,c:1}},
+    {s:{r:3,c:2},e:{r:4,c:2}},
+    {s:{r:3,c:4},e:{r:4,c:4}},
+    {s:{r:3,c:5},e:{r:4,c:5}},
+    {s:{r:5,c:0},e:{r:5,c:2}},
+    {s:{r:9,c:3},e:{r:9,c:5}},
+    {s:{r:18,c:3},e:{r:18,c:5}},
+    {s:{r:19,c:0},e:{r:19,c:2}},
+    {s:{r:23,c:3},e:{r:23,c:5}},
+    {s:{r:31,c:1},e:{r:31,c:2}},
+    {s:{r:31,c:4},e:{r:31,c:5}},
+    {s:{r:36,c:3},e:{r:36,c:5}},
+    {s:{r:37,c:3},e:{r:37,c:5}},
+    {s:{r:38,c:3},e:{r:38,c:5}},
+    {s:{r:39,c:3},e:{r:39,c:5}},
+    {s:{r:40,c:1},e:{r:40,c:2}},
+    {s:{r:41,c:1},e:{r:41,c:2}},
+    {s:{r:42,c:1},e:{r:42,c:2}}
+  ];
+
+  const rg=XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=rg.s.r;R<=rg.e.r;R++){
+    for(let C=0;C<=rg.e.c;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(ws[addr]&&ws[addr].t==="n"){
+        ws[addr].z="#,##0.00";
+      }
+    }
+  }
+  return ws;
 }
 function sheetFrom(aoa,widths){const ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=widths.map(w=>({wch:w}));
   const rg=XLSX.utils.decode_range(ws["!ref"]);for(let R=rg.s.r;R<=rg.e.r;R++)for(let C=1;C<=rg.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C});if(ws[a]&&ws[a].t==="n")ws[a].z="#,##0.00";}return ws;}
@@ -742,20 +1134,37 @@ function buildWorkbook(){
     ["เดือน","ยอดยาคงคลังยกมา","ค่ายาสมุนไพรที่ซื้อในเดือนนี้",COGS_LABEL,"ยอดยาคงคลังคงเหลือยกไป"]];
   inv.forEach((r,i)=>adm.push([MONTHS[i].short,r.begin,r.purchase,r.cogs||0,r.end]));
   XLSX.utils.book_append_sheet(wb,sheetFrom(adm,[30,20,24,30,22]),"Admin");
-  MONTHS.forEach(m=>{const aoa=[["รายงานผลการดำเนินงาน ปีงบประมาณ 2570"],['ศูนย์ส่งเสริมสุขภาพแผนไทย “กมลาศรม” สำนักงานสาธารณสุขจังหวัดพิษณุโลก'],["ประจำเดือน "+m.full],[],
-    ["รายการรายรับจากการบริการ","จำนวนเงิน (บาท)","รวมรับตั้งแต่ต้นปี"]].concat(reportRows(m.key));
-    XLSX.utils.book_append_sheet(wb,sheetFrom(aoa,[62,18,20]),m.short);});
+  MONTHS.forEach(m=>{
+    XLSX.utils.book_append_sheet(wb,buildMonthSheet(m.key),m.short);
+  });
   return wb;
 }
+async function downloadMonth(key){
+  const msg=$("#repDlMsg")||$("#dlMsg");if(msg){msg.className="msg";msg.textContent="";}
+  try{
+    const m=MONTHS.find(x=>x.key===key)||MONTHS[0];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,buildMonthSheet(key),m.short);
+    const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    const fname="รายงานผลการดำเนินงาน_"+m.full.replace(/\s+/g,"_")+".xlsx";
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    if(S.downloads)await S.downloads.save({filename:fname,data:blob});
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+    if(msg)msg.textContent="ดาวน์โหลดแล้ว";
+  }catch(e){
+    const c=e&&e.code;if(c==="declined")return;
+    if(msg){msg.className="msg err";msg.textContent="ดาวน์โหลดไม่ได้";}
+  }
+}
 async function download(){
-  const msg=$("#dlMsg");msg.className="msg";msg.textContent="";
+  const msg=$("#repDlMsg")||$("#dlMsg");if(msg){msg.className="msg";msg.textContent="";}
   try{const buf=XLSX.write(buildWorkbook(),{bookType:"xlsx",type:"array"});
     const fname="รายงานผลการดำเนินงาน_ปีงบ2570.xlsx",blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     if(S.downloads)await S.downloads.save({filename:fname,data:blob});
     else{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
-    msg.textContent="ดาวน์โหลดแล้ว";}
-  catch(e){const c=e&&e.code;if(c==="declined")return;if(c==="rate_limited"){msg.textContent="มีหน้าต่างดาวน์โหลดเปิดอยู่ ลองอีกครั้งสักครู่";return;}
-    msg.className="msg err";msg.textContent="ดาวน์โหลดไม่ได้ในมุมมองนี้";if(["unavailable","not_granted","capability_disabled","capability_removed"].includes(c))$("#dlBtn").hidden=true;}
+    if(msg)msg.textContent="ดาวน์โหลดแล้ว";}
+  catch(e){const c=e&&e.code;if(c==="declined")return;if(c==="rate_limited"){if(msg)msg.textContent="มีหน้าต่างดาวน์โหลดเปิดอยู่ ลองอีกครั้งสักครู่";return;}
+    if(msg){msg.className="msg err";msg.textContent="ดาวน์โหลดไม่ได้ในมุมมองนี้";}if(["unavailable","not_granted","capability_disabled","capability_removed"].includes(c)){const b=$("#dlBtn");if(b)b.hidden=true;}}
 }
 
 // ---------- events ----------
@@ -771,6 +1180,7 @@ document.addEventListener("input",e=>{
     const m=$("#admMsg");if(m){m.className="msg";m.textContent="มีการแก้ไขที่ยังไม่บันทึก";}updateAdminDerived();}
 });
 document.addEventListener("change",e=>{const t=e.target;if(t.id==="histSel"){S.histMonth=t.value;renderHistory();}
+  if(t.id==="repMonthSel"){S.curMonthReport=t.value;renderReport();}
   if(S.userForm&&t.id==="ufRole")S.userForm.role=t.value;if(S.userForm&&t.id==="ufActive")S.userForm.active=t.checked;});
 document.addEventListener("submit",e=>{if(e.target.id==="userForm"){e.preventDefault();saveUserForm();}});
 document.addEventListener("click",e=>{
@@ -783,7 +1193,8 @@ document.addEventListener("click",e=>{
   if(id==="bUnlock"){if(!armed("unlock")){S.confirm={a:"unlock",k:S.cur,t:Date.now()};updateBar();setTimeout(updateBar,6100);return;}saveMonth("unlock");return;}
   if(id==="admRevert"){S.adminDraft=null;renderAdmin();return;}
   if(id==="admSave"){saveAdmin();return;}
-  if(id==="dlBtn"){download();return;}
+  if(id==="dlBtn"||id==="repDlAllBtn"){download();return;}
+  if(id==="repDlMonthBtn"){downloadMonth(S.curMonthReport||S.cur);return;}
   if(id==="ufCancel"){S.userForm=blankUserForm();renderUsers();return;}
   if(t.dataset.uedit){const u=t.dataset.uedit,d=S.users[u];if(!d)return;S.userForm={mode:"edit",u,name:d.name,role:d.role,active:d.active!==false,pass:""};renderUsers();$("#ufName").focus();return;}
   if(t.dataset.udel){const u=t.dataset.udel;if(!(S.confirm&&S.confirm.a==="del:"+u&&Date.now()-S.confirm.t<6000)){S.confirm={a:"del:"+u,k:"",t:Date.now()};renderUsers();setTimeout(()=>{if(S.view==="users")renderUsers();},6100);return;}deleteUser(u);return;}
@@ -795,6 +1206,7 @@ function refreshAll(){
   syncSession();if(!S.session)return;
   if(S.view==="form"){renderStrip();const focused=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.f;
     if(!isDirty(S.cur)&&!focused)renderForm();else updateDerived();}
+  else if(S.view==="report")renderReport();
   else if(S.view==="admin"){if(!S.adminDraft)renderAdmin();else updateAdminDerived();}
   else if(S.view==="users"){const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#userForm")))renderUsers();}
   else if(S.view==="history")renderHistory();
