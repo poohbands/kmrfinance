@@ -763,6 +763,9 @@ function renderSummary(){
 function renderReport(){
   const curKey=S.curMonthReport||S.cur;
   const m=MONTHS.find(x=>x.key===curKey)||MONTHS[0];
+  const mIdx=MONTHS.findIndex(x=>x.key===curKey);
+  const inv=inventory(false);
+  const invRow=inv[mIdx]||{begin:0,purchase:0,cogs:null,end:0};
   const v=valuesFor(curKey);
   const c=compute(curKey);
   const cum=f=>cumulative(curKey,f);
@@ -1015,7 +1018,7 @@ function renderReport(){
           <tr>
             <td>ต้นทุน</td>
             <td class="r">${fmt(c.proc)}</td>
-            <td class="r">${fmt(c.cogs)}</td>
+            <td class="r">${fmt((c.cogs||0) + (v.e8||0))}</td>
             <td class="r b">${fmt(cum("exp"))}</td>
           </tr>
           <tr>
@@ -1042,14 +1045,46 @@ function renderReport(){
         </tbody>
       </table>
     </div>
+
+    <!-- Table 3: ยาสมุนไพรคงคลัง (ราคาทุน) -->
+    <div style="overflow-x:auto;margin-top:28px">
+      <table class="rep-t" style="max-width:720px">
+        <thead>
+          <tr>
+            <th class="th-green" colspan="2" style="text-align:left">สรุปมูลค่ายาสมุนไพรคงคลัง (ราคาทุน)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="width:68%">${mIdx===0 ? 'ยอดยาคงคลังยกมา ณ ต้นเดือนตุลาคม 2569 (Admin กรอก)' : 'ยอดยาคงคลังยกมาจากเดือนก่อนหน้า'}</td>
+            <td class="r" style="width:32%">${invRow.begin==null ? '–' : fmt(invRow.begin)}</td>
+          </tr>
+          <tr>
+            <td>บวก ค่ายาสมุนไพรที่ซื้อในเดือนนี้</td>
+            <td class="r">${fmt(c.purchase)}</td>
+          </tr>
+          <tr>
+            <td>หัก ${esc(COGS_LABEL)}</td>
+            <td class="r">${invRow.cogs==null ? '–' : fmt(invRow.cogs)}</td>
+          </tr>
+          <tr class="tot-green">
+            <td><b>ยอดยาคงคลังคงเหลือยกไปเดือนถัดไป</b></td>
+            <td class="r b">${invRow.end==null ? '–' : fmt(invRow.end)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>`;
   $("#v-report").innerHTML=h;
 }
 function buildMonthSheet(key){
   const m=MONTHS.find(x=>x.key===key)||MONTHS[0];
+  const idx=MONTHS.findIndex(x=>x.key===key);
   const v=valuesFor(key);
   const c=compute(key);
   const cum=f=>cumulative(key,f);
+  const inv=inventory(false);
+  const invRow=inv[idx]||{begin:0,purchase:0,cogs:0,end:0};
 
   const aoa=[
     ["รายงานผลการดำเนินงาน  ปีงบประมาณ  2570",null,null,null,null,null],
@@ -1090,11 +1125,17 @@ function buildMonthSheet(key){
     [null,null,null,null,null,null],
     ["การจัดบริการด้านแพทย์แผนไทย","ด้านหัตถการทางการแพทย์แผนไทยฯ","ยาสมุนไพรสำเร็จและยาปรุงเฉพาะราย","รายได้สะสมปีงบ 2570 (ต.ค.69 - "+m.short+")",null,null],
     ["รายได้",c.revProc,c.revHerb,cum("rev"),null,null],
-    ["ต้นทุน",c.proc,c.cogs,cum("exp"),null,null],
+    ["ต้นทุน",c.proc,(c.cogs||0)+(v.e8||0),cum("exp"),null,null],
     ["กำไร",c.profProc,c.profHerb,cum("net"),null,null],
     ["ต้นทุนการจัดบริการอื่นๆ",c.other,null,null,null,null],
     ["ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ",c.ot,null,null,null,null],
-    ["กำไรหลังหักค่าใช้จ่ายอื่นๆ",c.net,null,null,null,null]
+    ["กำไรหลังหักค่าใช้จ่ายอื่นๆ",c.net,null,null,null,null],
+    [null,null,null,null,null,null],
+    ["สรุปมูลค่ายาสมุนไพรคงคลัง (ราคาทุน)",null,null,null,null,null],
+    [idx===0 ? "ยอดยาคงคลังยกมา ณ ต้นเดือนตุลาคม 2569 (Admin กรอก)" : "ยอดยาคงคลังยกมาจากเดือนก่อนหน้า", invRow.begin||0, null, null, null, null],
+    ["บวก  ค่ายาสมุนไพรที่ซื้อในเดือนนี้", c.purchase, null, null, null, null],
+    ["หัก  " + COGS_LABEL, invRow.cogs||0, null, null, null, null],
+    ["ยอดยาคงคลังคงเหลือยกไปเดือนถัดไป", invRow.end||0, null, null, null, null]
   ];
 
   const ws=XLSX.utils.aoa_to_sheet(aoa);
@@ -1115,12 +1156,14 @@ function buildMonthSheet(key){
     {s:{r:31,c:1},e:{r:31,c:2}},
     {s:{r:31,c:4},e:{r:31,c:5}},
     {s:{r:36,c:3},e:{r:36,c:5}},
-    {s:{r:37,c:3},e:{r:37,c:5}},
-    {s:{r:38,c:3},e:{r:38,c:5}},
-    {s:{r:39,c:3},e:{r:39,c:5}},
     {s:{r:40,c:1},e:{r:40,c:2}},
     {s:{r:41,c:1},e:{r:41,c:2}},
-    {s:{r:42,c:1},e:{r:42,c:2}}
+    {s:{r:42,c:1},e:{r:42,c:2}},
+    {s:{r:44,c:0},e:{r:44,c:3}},
+    {s:{r:45,c:1},e:{r:45,c:3}},
+    {s:{r:46,c:1},e:{r:46,c:3}},
+    {s:{r:47,c:1},e:{r:47,c:3}},
+    {s:{r:48,c:1},e:{r:48,c:3}}
   ];
 
   const rg=XLSX.utils.decode_range(ws["!ref"]);

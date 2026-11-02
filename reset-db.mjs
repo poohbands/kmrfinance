@@ -1,5 +1,12 @@
 import { sql } from "./db.mjs";
 
+if (process.env.CONFIRM_RESET !== "true") {
+  console.error("❌ SAFETY LOCK: reset-db.mjs will NOT run without CONFIRM_RESET=true.");
+  console.error("This safety lock prevents accidental deletion of financial and user data.");
+  console.error("To reset intentionally, run: $env:CONFIRM_RESET=\"true\"; node reset-db.mjs");
+  process.exit(1);
+}
+
 async function resetDatabase() {
   console.log("Connecting to Neon Postgres to reset data...");
   if (!sql) {
