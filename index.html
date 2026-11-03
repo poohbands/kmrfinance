@@ -252,6 +252,13 @@ table.t td.l{text-align:left}
 .dash-chart-head h3{margin:0;font-size:1.18rem;font-weight:700;color:var(--ink)}
 .dash-chart-canvas{position:relative;width:100%;height:380px}
 .btn.small{padding:4px 9px;font-size:.82rem;border-radius:7px}
+.menu-toggle-item{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;gap:14px;flex-wrap:wrap;transition:all .15s ease}
+.menu-toggle-item:hover{border-color:var(--herb);box-shadow:var(--shadow)}
+.menu-toggle-item.is-closed{opacity:.85;border-style:dashed}
+.badge-tag{font-size:.76rem;background:var(--herb-soft);color:#B24816;padding:2px 8px;border-radius:6px;font-weight:600}
+.badge-status{font-size:.82rem;font-weight:700;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px}
+.badge-status.open{background:rgba(46,139,87,.15);color:var(--good)}
+.badge-status.closed{background:rgba(230,90,75,.15);color:#E65A4B}
 @media (max-width:640px){
   .dash-chart-canvas{height:300px}
   .dash-card .cval{font-size:1.45rem}
@@ -289,6 +296,7 @@ table.t td.l{text-align:left}
       <a href="#report" data-view="report">หน้ารายงานประจำเดือน</a>
       <a href="#summary" data-view="summary">สรุปทั้งปี</a>
       <a href="#admin" data-view="admin">ยอดยกมาและต้นทุนยา</a>
+      <a href="#settings" data-view="settings" data-adminonly>เปิด-ปิดเมนู</a>
       <a href="#users" data-view="users" data-adminonly>ผู้ใช้งาน</a>
       <a href="#history" data-view="history" data-adminonly>ประวัติการแก้ไข</a>
     </nav>
@@ -308,9 +316,16 @@ table.t td.l{text-align:left}
     </section>
     <section class="panel" id="v-report" hidden></section>
     <section class="panel" id="v-admin" hidden></section>
+    <section class="panel" id="v-settings" hidden></section>
     <section class="panel" id="v-users" hidden></section>
     <section class="panel" id="v-history" hidden></section>
     <section class="panel" id="v-summary" hidden></section>
+    <section class="panel" id="v-none" hidden>
+      <div class="notice" style="text-align:center;padding:36px 20px;margin-top:20px">
+        <h3 style="margin-top:0;font-size:1.25rem;color:var(--ink)">ระบบปิดปรับปรุงเมนูชั่วคราว</h3>
+        <p style="margin:8px 0 0;color:var(--muted)">ผู้ดูแลระบบ (Admin) ได้ปิดการเข้าถึงเมนูต่างๆ ชั่วคราว กรุณาติดต่อผู้ดูแลระบบ</p>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -370,7 +385,7 @@ const EXP=[
 const FIELDS=[],LABEL={};
 REV.concat(EXP).forEach(g=>{g.items.concat(g.after||[]).forEach(i=>{FIELDS.push(i[0]);LABEL[i[0]]=(g.title.indexOf("รายได้")===0?"รายรับ ":"รายจ่าย ")+i[1];});});
 
-const S={view:"form",cur:MONTHS[0].key,dashChart:null,curMonthReport:null,months:{},admin:{carry:null,cogs:{}},drafts:{},adminDraft:null,adminNote:"",
+const S={view:"form",cur:MONTHS[0].key,dashChart:null,curMonthReport:null,months:{},admin:{carry:null,cogs:{},menus:{}},drafts:{},adminDraft:null,adminNote:"",
   users:{},usersLoaded:false,audit:[],session:null,reason:"",confirm:null,histMonth:"",userForm:null,
   mode:"loading",standalone:false,canAdmin:false,readonlyMonths:false,db:null,downloads:null,saving:false};
 
@@ -434,7 +449,7 @@ function inventory(useDraft){
 
 // ---------- persistence ----------
 const LS="kamalasrom-fy2570-v1";
-function localLoad(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");S.months=o.months||{};S.admin=o.admin||{carry:null,cogs:{}};if(!S.admin.cogs)S.admin.cogs={};S.users=o.users||{};S.audit=o.audit||[];}catch(e){}}
+function localLoad(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");S.months=o.months||{};S.admin=o.admin||{carry:null,cogs:{},menus:{}};if(!S.admin.cogs)S.admin.cogs={};if(!S.admin.menus)S.admin.menus={};S.users=o.users||{};S.audit=o.audit||[];}catch(e){}}
 function localSave(){try{localStorage.setItem(LS,JSON.stringify({months:S.months,admin:S.admin,users:S.users,audit:S.audit.slice(0,500)}));return true;}catch(e){return false;}}
 async function persistMonth(key,doc){
   if(S.mode==="db"){await S.db.collection("months").doc(key).set(doc);}
@@ -514,21 +529,79 @@ $("#loginForm").addEventListener("submit",async e=>{
 });
 
 // ---------- shell ----------
+const TOGGLE_MENUS=[
+  {key:"dashboard",name:"แดชบอร์ด",desc:"ภาพรวม KPI และกราฟเปรียบเทียบผลการดำเนินงาน",tag:"ผู้บริหาร"},
+  {key:"form",name:"กรอกข้อมูลรายเดือน",desc:"แบบฟอร์มบันทึกตัวเลขรายรับและรายจ่ายประจำเดือน",tag:"เจ้าหน้าที่"},
+  {key:"report",name:"หน้ารายงานประจำเดือน",desc:"รายงานผลการดำเนินงานทางการประจำเดือนและพิมพ์รายงาน",tag:"รายงาน"},
+  {key:"summary",name:"สรุปทั้งปี",desc:"ตารางสรุป 12 เดือนและดาวน์โหลดรายงาน Excel",tag:"สรุปผล"},
+  {key:"admin",name:"ยอดยกมาและต้นทุนยา",desc:"กำหนดยอดยกมาต้นปีงบและต้นทุนค่ายาสมุนไพร",tag:"ข้อมูลยา"}
+];
+
+function isMenuEnabled(key){
+  if(!S.admin||!S.admin.menus)return true;
+  return S.admin.menus[key]!==false;
+}
+
+function updateTabVisibility(){
+  const isAdm=isAdmin();
+  document.querySelectorAll("nav.tabs a").forEach(a=>{
+    const v=a.dataset.view;
+    if(a.hasAttribute("data-adminonly")){
+      a.hidden=!isAdm;
+    }else{
+      const open=isMenuEnabled(v);
+      if(!isAdm){
+        a.hidden=!open;
+      }else{
+        a.hidden=false;
+        if(!a.dataset.origText)a.dataset.origText=a.textContent.trim().replace(/\s*ปิด$/,"");
+        const title=a.dataset.origText;
+        a.innerHTML=open?esc(title):`${esc(title)} <span style="font-size:.72rem;background:#E65A4B;color:#fff;padding:1px 5px;border-radius:4px;margin-left:3px;vertical-align:middle">ปิด</span>`;
+      }
+    }
+  });
+}
+
 function renderShell(){
   const on=!!S.session;
   $("#gate").hidden=on;$("#app").hidden=!on;
   const chip=$("#userchip");chip.hidden=!on;
   if(on){chip.innerHTML=`ผู้ใช้: <b>${esc(S.session.name)}</b> <span class="badge ${S.session.role}">${esc(ROLES[S.session.role])}</span><button class="linkbtn" type="button" id="logoutBtn">ออกจากระบบ</button>`;}
-  document.querySelectorAll("[data-adminonly]").forEach(a=>a.hidden=!isAdmin());
+  updateTabVisibility();
   if(on)showView(location.hash.slice(1)||(role()==="viewer"?"dashboard":S.view));else $("#bar").hidden=true;
 }
+
 function showView(v){
-  const ok=["dashboard","form","report","admin","summary"].concat(isAdmin()?["users","history"]:[]);
-  if(!ok.includes(v))v=role()==="viewer"?"dashboard":"form";S.view=v;
+  updateTabVisibility();
+  const isAdm=isAdmin();
+  const baseViews=["dashboard","form","report","admin","summary"];
+  const allowedViews=isAdm?baseViews.concat(["settings","users","history"]):baseViews.filter(k=>isMenuEnabled(k));
+
+  if(!allowedViews.includes(v)){
+    if(isAdm){
+      v="dashboard";
+    }else{
+      if(role()==="viewer"&&allowedViews.includes("dashboard"))v="dashboard";
+      else if(role()==="staff"&&allowedViews.includes("form"))v="form";
+      else v=allowedViews[0]||"none";
+    }
+  }
+  S.view=v;
+
   document.querySelectorAll("nav.tabs a").forEach(a=>a.setAttribute("aria-current",a.dataset.view===v?"page":"false"));
-  ["dashboard","form","report","admin","users","history","summary"].forEach(x=>$("#v-"+x).hidden=x!==v);
-  $("#bar").hidden=v!=="form"||!S.session;
-  if(v==="dashboard")renderDashboard();if(v==="form"){renderStrip();renderForm();}if(v==="report")renderReport();if(v==="admin")renderAdmin();if(v==="users")renderUsers();if(v==="history")renderHistory();if(v==="summary")renderSummary();
+  ["dashboard","form","report","admin","settings","users","history","summary","none"].forEach(x=>{
+    const el=$("#v-"+x);if(el)el.hidden=x!==v;
+  });
+  $("#bar").hidden=v!=="form"||!S.session||(!isAdm&&!isMenuEnabled("form"));
+
+  if(v==="dashboard")renderDashboard();
+  if(v==="form"){renderStrip();renderForm();}
+  if(v==="report")renderReport();
+  if(v==="admin")renderAdmin();
+  if(v==="settings")renderSettings();
+  if(v==="users")renderUsers();
+  if(v==="history")renderHistory();
+  if(v==="summary")renderSummary();
 }
 window.addEventListener("hashchange",()=>{if(S.session)showView(location.hash.slice(1));});
 
@@ -698,6 +771,149 @@ async function saveAdmin(){
     await logAudit({action:(isAdm?"Admin ":"เจ้าหน้าที่ ")+"แก้ไขต้นทุนยา/ยอดยกมา",month:"",changes,reason:S.adminNote.trim()});
     S.adminDraft=null;S.adminNote="";S.saving=false;renderAdmin();toast("บันทึกข้อมูลต้นทุนยาแล้ว");}
   catch(e){S.saving=false;msg.className="msg err";msg.textContent=errText(e);updateAdminDerived();}
+}
+
+// ---------- settings / menu toggles (admin only) ----------
+function renderSettings(){
+  if(!isAdmin()){
+    $("#v-settings").innerHTML=`<div class="notice">เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถเข้าถึงส่วนนี้ได้</div>`;
+    return;
+  }
+  if(!S.admin)S.admin={carry:null,cogs:{},menus:{}};
+  if(!S.admin.menus)S.admin.menus={};
+
+  let openCount=0,closedCount=0;
+  TOGGLE_MENUS.forEach(m=>{
+    if(isMenuEnabled(m.key))openCount++;else closedCount++;
+  });
+
+  let h=`<div class="dash-header">
+    <div>
+      <h2>⚙️ ตั้งค่าการเปิด-ปิดเมนูในระบบ</h2>
+      <p style="margin:4px 0 0;font-size:.92rem;color:var(--muted)">กำหนดสิทธิ์การมองเห็นเมนูต่างๆ สำหรับผู้ใช้งานทั่วไป (เจ้าหน้าที่ และ ผู้ดูรายงาน) · <b>เฉพาะ Admin เท่านั้นที่เห็นและจัดการหน้านี้ได้</b></p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="msg" id="settingsMsg"></span>
+      <button class="btn ghost small" type="button" id="btnEnableAll">เปิดทุกเมนู</button>
+      <button class="btn warnbtn small" type="button" id="btnDisableAll">ปิดทุกเมนู (สำหรับผู้ใช้)</button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px">
+    <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 18px">
+      <div style="font-size:.85rem;color:var(--muted);font-weight:600">เมนูที่เปิดใช้งานอยู่</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--good);margin-top:4px">${openCount} เมนู</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:2px">ผู้ใช้สามารถมองเห็นและใช้งานได้</div>
+    </div>
+    <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 18px">
+      <div style="font-size:.85rem;color:var(--muted);font-weight:600">เมนูที่ปิดการใช้งาน (ซ่อน)</div>
+      <div style="font-size:1.6rem;font-weight:700;color:${closedCount>0?"#E65A4B":"var(--muted)"};margin-top:4px">${closedCount} เมนู</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:2px">ซ่อนจากแถบเมนูของผู้ใช้ทั่วไป</div>
+    </div>
+    <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 18px">
+      <div style="font-size:.85rem;color:var(--muted);font-weight:600">สิทธิ์ผู้ดูแลระบบ (Admin)</div>
+      <div style="font-size:1.15rem;font-weight:700;color:#E07038;margin-top:8px">เข้าถึงได้ครบทุกเมนูเสมอ</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:2px">Admin จะเห็นป้าย "ปิด" กำกับในแท็บที่ถูกซ่อน</div>
+    </div>
+  </div>
+
+  <div class="dash-chart-box" style="padding:20px">
+    <div class="dash-chart-head" style="margin-bottom:18px">
+      <div>
+        <h3 style="font-size:1.15rem">รายการเมนูที่สามารถเปิด-ปิดได้</h3>
+        <p style="margin:4px 0 0;font-size:.84rem;color:var(--muted)">คลิกปุ่ม "เปิดใช้งาน" หรือ "ปิดเมนูนี้" เพื่อสลับสถานะ (ระบบจะบันทึกและแสดงผลทันที)</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">`;
+
+  TOGGLE_MENUS.forEach(m=>{
+    const open=isMenuEnabled(m.key);
+    h+=`<div class="menu-toggle-item ${open?"":"is-closed"}">
+      <div style="min-width:240px;flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <b style="font-size:1.05rem;color:var(--ink)">${esc(m.name)}</b>
+          <span class="badge-tag">${esc(m.tag)}</span>
+          <span class="badge-status ${open?"open":"closed"}">
+            ${open?"● เปิดใช้งานอยู่":"○ ปิดใช้งานอยู่ (ซ่อนจากผู้ใช้)"}
+          </span>
+        </div>
+        <p style="margin:6px 0 0;font-size:.86rem;color:var(--muted)">${esc(m.desc)}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="button" class="btn ${open?"warnbtn":"ghost"}" data-togglemenu="${esc(m.key)}" data-action="${open?"disable":"enable"}" style="min-width:105px;padding:7px 14px;font-size:.88rem">
+          ${open?"ปิดเมนูนี้":"เปิดใช้งาน"}
+        </button>
+      </div>
+    </div>`;
+  });
+
+  h+=`</div>
+    <div style="margin-top:20px;padding:12px 16px;background:var(--herb-soft);border-radius:10px;font-size:.86rem;color:#8A4016;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.2rem">🔒</span>
+      <span><b>การรักษาความปลอดภัย:</b> เมนู "เปิด-ปิดเมนู", "ผู้ใช้งาน" และ "ประวัติการแก้ไข" เป็นเมนูระบบเฉพาะของ Admin จึงไม่สามารถถูกปิด และผู้ใช้อื่นจะมองไม่เห็นเมนูเหล่านี้อยู่แล้ว</span>
+    </div>
+  </div>`;
+
+  $("#v-settings").innerHTML=h;
+}
+
+async function toggleMenuState(key, enabled){
+  if(!isAdmin())return;
+  if(!S.admin)S.admin={carry:null,cogs:{},menus:{}};
+  if(!S.admin.menus)S.admin.menus={};
+  
+  S.admin.menus[key]=enabled;
+  const menuInfo=TOGGLE_MENUS.find(m=>m.key===key);
+  const menuName=menuInfo?menuInfo.name:key;
+  const statusText=enabled?"เปิดใช้งาน":"ปิดการแสดงผล";
+
+  const msg=$("#settingsMsg");
+  if(msg){msg.className="msg";msg.textContent="กำลังบันทึก...";}
+
+  try{
+    await persistAdmin(S.admin);
+    await logAudit({
+      action: enabled ? "เปิดเมนู" : "ปิดเมนู",
+      month: "",
+      reason: `เปลี่ยนสถานะเมนู "${menuName}" เป็น ${statusText}`
+    });
+    if(msg){msg.className="msg ok";msg.textContent=`บันทึกแล้ว (${menuName}: ${statusText})`;}
+    toast(`บันทึกแล้ว: ${menuName} (${statusText})`);
+    updateTabVisibility();
+    renderSettings();
+  }catch(err){
+    if(msg){msg.className="msg err";msg.textContent="เกิดข้อผิดพลาดในการบันทึก";}
+    toast("บันทึกไม่สำเร็จ");
+  }
+}
+
+async function toggleAllMenus(enabled){
+  if(!isAdmin())return;
+  if(!S.admin)S.admin={carry:null,cogs:{},menus:{}};
+  if(!S.admin.menus)S.admin.menus={};
+  
+  TOGGLE_MENUS.forEach(m=>{
+    S.admin.menus[m.key]=enabled;
+  });
+
+  const msg=$("#settingsMsg");
+  if(msg){msg.className="msg";msg.textContent="กำลังบันทึก...";}
+  try{
+    await persistAdmin(S.admin);
+    await logAudit({
+      action: enabled ? "เปิดทุกเมนู" : "ปิดทุกเมนู",
+      month: "",
+      reason: enabled ? "เปิดการแสดงผลทุกเมนูสำหรับผู้ใช้งาน" : "ปิดการแสดงผลทุกเมนูสำหรับผู้ใช้งานทั่วไป"
+    });
+    if(msg){msg.className="msg ok";msg.textContent=enabled?"เปิดทุกเมนูเรียบร้อยแล้ว":"ปิดทุกเมนูเรียบร้อยแล้ว";}
+    toast(enabled?"เปิดทุกเมนูเรียบร้อยแล้ว":"ปิดทุกเมนูเรียบร้อยแล้ว");
+    updateTabVisibility();
+    renderSettings();
+  }catch(err){
+    if(msg){msg.className="msg err";msg.textContent="เกิดข้อผิดพลาดในการบันทึก";}
+    toast("บันทึกไม่สำเร็จ");
+  }
 }
 
 // ---------- users ----------
@@ -1489,6 +1705,9 @@ document.addEventListener("click",e=>{
   if(id==="bUnlock"){if(!armed("unlock")){S.confirm={a:"unlock",k:S.cur,t:Date.now()};updateBar();setTimeout(updateBar,6100);return;}saveMonth("unlock");return;}
   if(id==="admRevert"){S.adminDraft=null;renderAdmin();return;}
   if(id==="admSave"){saveAdmin();return;}
+  if(t.dataset.togglemenu){toggleMenuState(t.dataset.togglemenu, t.dataset.action==="enable");return;}
+  if(id==="btnEnableAll"){toggleAllMenus(true);return;}
+  if(id==="btnDisableAll"){toggleAllMenus(false);return;}
   if(id==="dlBtn"||id==="repDlAllBtn"||id==="dashDlBtn"){download();return;}
   if(id==="repDlMonthBtn"){downloadMonth(S.curMonthReport||S.cur);return;}
   if(t.dataset.repmonth){S.curMonthReport=t.dataset.repmonth;location.hash="#report";showView("report");return;}
@@ -1506,6 +1725,7 @@ function refreshAll(){
     if(!isDirty(S.cur)&&!focused)renderForm();else updateDerived();}
   else if(S.view==="report")renderReport();
   else if(S.view==="admin"){if(!S.adminDraft)renderAdmin();else updateAdminDerived();}
+  else if(S.view==="settings")renderSettings();
   else if(S.view==="users"){const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#userForm")))renderUsers();}
   else if(S.view==="history")renderHistory();
   else renderSummary();
@@ -1547,8 +1767,9 @@ async function boot(){
         if(dRes.ok){
           const d=await dRes.json();
           S.months=d.months||{};
-          S.admin=d.admin||{carry:null,cogs:{}};
+          S.admin=d.admin||{carry:null,cogs:{},menus:{}};
           if(!S.admin.cogs)S.admin.cogs={};
+          if(!S.admin.menus)S.admin.menus={};
           S.users=d.users||{};
           S.audit=d.audit||[];
           S.usersLoaded=true;
