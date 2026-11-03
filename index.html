@@ -333,10 +333,9 @@ const EXP=[
    ["e9","9. ค่าจ้างผู้ช่วยแพทย์แผนไทย"],["e10","10. ต้นทุนบริการอบสมุนไพร"],["e11","11. ต้นทุนบริการการดูแลมารดาหลังคลอด"]],
   calcs:[["รวมค่าใช้จ่าย","proc"]]},
  {title:"ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ",items:[
-   ["e12","12. ค่า OT เจ้าหน้าที่ (วันจันทร์ - ศุกร์)"],["e13","13. ค่า OT จ้างเหมาบริการ (วันจันทร์ - ศุกร์)"],
-   ["e14","14. ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)"],
-   ["e15","15. ค่า OT จ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน เสาร์-อาทิตย์)","เช่น 650*6+390*4"],
-   ["e16","16. ค่า OT พนักงานทำความสะอาด","เช่น 450*8"]],
+   ["e12","12. ค่า OT เจ้าหน้าที่ (วันจันทร์ - ศุกร์)"],
+   ["e13","13. ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)","เช่น 650*6+390*4"],
+   ["e14","14. ค่า OT พนักงานทำความสะอาด","เช่น 450*8"]],
   calcs:[["รวมค่าใช้จ่าย","ot"]]}
 ];
 const FIELDS=[],LABEL={};
@@ -392,7 +391,7 @@ function cogsUse(key,useDraft){const ex=exprsFor(key);if(ex&&ex.cogs!=null&&ex.c
 function carryUse(useDraft){if(useDraft&&S.adminDraft){const r=evalExpr(S.adminDraft.carry);return r.ok?r.value:null;}return typeof S.admin.carry==="number"?S.admin.carry:null;}
 function compute(key,useAdminDraft){
   const v=valuesFor(key),cogs=v.cogs!=null?v.cogs:(cogsUse(key,useAdminDraft)||0),c=Object.assign({},v,{cogs});
-  c.other=v.e1+v.e2+v.e3;c.purchase=v.e4+v.e5+v.e6+v.e7;c.proc=v.e9+v.e10+v.e11;c.ot=v.e12+v.e13+v.e14+v.e15+v.e16;
+  c.other=v.e1+v.e2+v.e3;c.purchase=v.e4+v.e5+v.e6+v.e7;c.proc=v.e9+v.e10+v.e11;c.ot=(v.e12||0)+(v.e13||0)+(v.e14||0)+(v.e15||0)+(v.e16||0);
   c.p1=v.r1-v.e9;c.p2=v.r2-v.e10;c.p3=v.r3-v.e11;c.p4=v.r4-cogs;c.p5=v.r5-v.e8;
   c.revProc=v.r1+v.r2+v.r3;c.profProc=c.p1+c.p2+c.p3;c.revHerb=v.r4+v.r5;c.profHerb=c.p4+c.p5;
   c.rev=c.revProc+c.revHerb;c.exp=c.other+cogs+v.e8+c.proc+c.ot;c.net=c.rev-c.exp;return c;
@@ -950,7 +949,7 @@ function renderReport(){
             <td class="b">รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)</td>
             <td class="r b">${fmt(c.revHerb)}</td>
             <td class="r b">${fmt(cum("revHerb"))}</td>
-            <td>13. ค่า OT จ้างเหมาบริการ (วันจันทร์ - ศุกร์)</td>
+            <td>13. ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)</td>
             <td class="r">${fmt(v.e13)}</td>
             <td class="r">${fmt(cum("e13"))}</td>
           </tr>
@@ -958,21 +957,9 @@ function renderReport(){
             <td class="b">กำไรรวมจากการให้บริการ (ยาสมุนไพร)</td>
             <td class="r b">${fmt(c.profHerb)}</td>
             <td class="r b">${fmt(cum("profHerb"))}</td>
-            <td>14. ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)</td>
+            <td>14. ค่า OT พนักงานทำความสะอาด</td>
             <td class="r">${fmt(v.e14)}</td>
             <td class="r">${fmt(cum("e14"))}</td>
-          </tr>
-          <tr>
-            <td></td><td></td><td></td>
-            <td>15. ค่า OT จ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน เสาร์-อาทิตย์)</td>
-            <td class="r">${fmt(v.e15)}</td>
-            <td class="r">${fmt(cum("e15"))}</td>
-          </tr>
-          <tr>
-            <td></td><td></td><td></td>
-            <td>16. ค่า OT พนักงานทำความสะอาด</td>
-            <td class="r">${fmt(v.e16)}</td>
-            <td class="r">${fmt(cum("e16"))}</td>
           </tr>
           <tr>
             <td></td><td></td><td></td>
@@ -1112,10 +1099,8 @@ function buildMonthSheet(key){
     [null,null,null,"รวมค่าใช้จ่าย",c.proc,cum("proc")],
     ["5. มูลค่าจำหน่ายยาปรุงเฉพาะรายสมุนไพร",v.r5,cum("r5"),"ค่าตอบแทนเจ้าหน้าที่นอกเวลาราชการ",null,null],
     ["    - กำไรจากการจำหน่ายยาปรุงเฉพาะราย",c.p5,cum("p5"),"12.  ค่า OT เจ้าหน้าที่ (วันจันทร์ - ศุกร์)",v.e12,cum("e12")],
-    ["รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)",c.revHerb,cum("revHerb"),"13.  ค่า OT จ้างเหมาบริการ (วันจันทร์ - ศุกร์)",v.e13,cum("e13")],
-    ["กำไรรวมจากการให้บริการ (ยาสมุนไพร)",c.profHerb,cum("profHerb"),"14.  ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)",v.e14,cum("e14")],
-    [null,null,null,"15.  ค่า OT จ้างเหมาบริการ (แพทย์แผนไทย/เจ้าหน้าที่เวชระเบียน เสาร์-อาทิตย์)",v.e15,cum("e15")],
-    [null,null,null,"16.  ค่า OT พนักงานทำความสะอาด",v.e16,cum("e16")],
+    ["รวมรายรับจากการให้บริการไม่หักทุน (ยาสมุนไพร)",c.revHerb,cum("revHerb"),"13.  ค่า OT เจ้าหน้าที่ (วันเสาร์ - อาทิตย์และนักขัตฤกษ์)",v.e13,cum("e13")],
+    ["กำไรรวมจากการให้บริการ (ยาสมุนไพร)",c.profHerb,cum("profHerb"),"14.  ค่า OT พนักงานทำความสะอาด",v.e14,cum("e14")],
     [null,null,null,"รวมค่าใช้จ่าย",c.ot,cum("ot")],
     ["รวมรายรับทั้งหมด",c.rev,cum("rev"),"รวมรายจ่ายทั้งหมด",c.exp,cum("exp")],
     ["กำไรสุทธิหลังหักค่าใช้จ่าย (รายเดือน)",c.net,null,"รายได้สะสมตลอดปีหลังหักค่าใช้จ่ายสุทธิ",cum("net"),null],
@@ -1153,17 +1138,17 @@ function buildMonthSheet(key){
     {s:{r:18,c:3},e:{r:18,c:5}},
     {s:{r:19,c:0},e:{r:19,c:2}},
     {s:{r:23,c:3},e:{r:23,c:5}},
-    {s:{r:31,c:1},e:{r:31,c:2}},
-    {s:{r:31,c:4},e:{r:31,c:5}},
-    {s:{r:36,c:3},e:{r:36,c:5}},
+    {s:{r:29,c:1},e:{r:29,c:2}},
+    {s:{r:29,c:4},e:{r:29,c:5}},
+    {s:{r:34,c:3},e:{r:34,c:5}},
+    {s:{r:38,c:1},e:{r:38,c:2}},
+    {s:{r:39,c:1},e:{r:39,c:2}},
     {s:{r:40,c:1},e:{r:40,c:2}},
-    {s:{r:41,c:1},e:{r:41,c:2}},
-    {s:{r:42,c:1},e:{r:42,c:2}},
-    {s:{r:44,c:0},e:{r:44,c:3}},
+    {s:{r:42,c:0},e:{r:42,c:3}},
+    {s:{r:43,c:1},e:{r:43,c:3}},
+    {s:{r:44,c:1},e:{r:44,c:3}},
     {s:{r:45,c:1},e:{r:45,c:3}},
-    {s:{r:46,c:1},e:{r:46,c:3}},
-    {s:{r:47,c:1},e:{r:47,c:3}},
-    {s:{r:48,c:1},e:{r:48,c:3}}
+    {s:{r:46,c:1},e:{r:46,c:3}}
   ];
 
   const rg=XLSX.utils.decode_range(ws["!ref"]);
