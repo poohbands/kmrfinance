@@ -230,6 +230,32 @@ table.t td.l{text-align:left}
 .chg{font-size:.88rem;line-height:1.45}
 .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .filters select{padding:7px 10px;border:1.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit}
+
+/* Dashboard styles */
+.dash-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.dash-header h2{margin:0;font-size:1.45rem;color:var(--ink)}
+.dash-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-bottom:24px}
+.dash-card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.dash-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px -2px rgba(224,112,56,.14)}
+.dash-card::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--card-accent,var(--herb))}
+.dash-card.rev{--card-accent:#E07038}
+.dash-card.exp{--card-accent:#A06C50}
+.dash-card.net{--card-accent:#2E8B57}
+.dash-card.best{--card-accent:#D97706}
+.dash-card .clbl{font-size:.9rem;color:var(--muted);font-weight:600;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dash-card .cval{font-size:1.7rem;font-weight:700;color:var(--ink);line-height:1.2;font-variant-numeric:tabular-nums}
+.dash-card .cval.good{color:var(--good)}
+.dash-card .cval.bad{color:var(--bad)}
+.dash-card .csub{font-size:.84rem;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center}
+.dash-chart-box{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);margin-bottom:24px}
+.dash-chart-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.dash-chart-head h3{margin:0;font-size:1.18rem;font-weight:700;color:var(--ink)}
+.dash-chart-canvas{position:relative;width:100%;height:380px}
+.btn.small{padding:4px 9px;font-size:.82rem;border-radius:7px}
+@media (max-width:640px){
+  .dash-chart-canvas{height:300px}
+  .dash-card .cval{font-size:1.45rem}
+}
 </style>
 </head>
 <body>
@@ -258,6 +284,7 @@ table.t td.l{text-align:left}
 
   <div id="app" hidden>
     <nav class="tabs" aria-label="ส่วนของแบบฟอร์ม">
+      <a href="#dashboard" data-view="dashboard">แดชบอร์ด</a>
       <a href="#form" data-view="form">กรอกข้อมูลรายเดือน</a>
       <a href="#report" data-view="report">หน้ารายงานประจำเดือน</a>
       <a href="#summary" data-view="summary">สรุปทั้งปี</a>
@@ -266,6 +293,7 @@ table.t td.l{text-align:left}
       <a href="#history" data-view="history" data-adminonly>ประวัติการแก้ไข</a>
     </nav>
 
+    <section class="panel" id="v-dashboard" hidden></section>
     <section class="panel" id="v-form">
       <div class="strip" id="strip" role="group" aria-label="เลือกเดือน"></div>
       <div class="monthhead">
@@ -298,6 +326,7 @@ table.t td.l{text-align:left}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -341,7 +370,7 @@ const EXP=[
 const FIELDS=[],LABEL={};
 REV.concat(EXP).forEach(g=>{g.items.concat(g.after||[]).forEach(i=>{FIELDS.push(i[0]);LABEL[i[0]]=(g.title.indexOf("รายได้")===0?"รายรับ ":"รายจ่าย ")+i[1];});});
 
-const S={view:"form",cur:MONTHS[0].key,months:{},admin:{carry:null,cogs:{}},drafts:{},adminDraft:null,adminNote:"",
+const S={view:"form",cur:MONTHS[0].key,dashChart:null,curMonthReport:null,months:{},admin:{carry:null,cogs:{}},drafts:{},adminDraft:null,adminNote:"",
   users:{},usersLoaded:false,audit:[],session:null,reason:"",confirm:null,histMonth:"",userForm:null,
   mode:"loading",standalone:false,canAdmin:false,readonlyMonths:false,db:null,downloads:null,saving:false};
 
@@ -491,15 +520,15 @@ function renderShell(){
   const chip=$("#userchip");chip.hidden=!on;
   if(on){chip.innerHTML=`ผู้ใช้: <b>${esc(S.session.name)}</b> <span class="badge ${S.session.role}">${esc(ROLES[S.session.role])}</span><button class="linkbtn" type="button" id="logoutBtn">ออกจากระบบ</button>`;}
   document.querySelectorAll("[data-adminonly]").forEach(a=>a.hidden=!isAdmin());
-  if(on)showView(location.hash.slice(1)||S.view);else $("#bar").hidden=true;
+  if(on)showView(location.hash.slice(1)||(role()==="viewer"?"dashboard":S.view));else $("#bar").hidden=true;
 }
 function showView(v){
-  const ok=["form","report","admin","summary"].concat(isAdmin()?["users","history"]:[]);
-  if(!ok.includes(v))v="form";S.view=v;
+  const ok=["dashboard","form","report","admin","summary"].concat(isAdmin()?["users","history"]:[]);
+  if(!ok.includes(v))v=role()==="viewer"?"dashboard":"form";S.view=v;
   document.querySelectorAll("nav.tabs a").forEach(a=>a.setAttribute("aria-current",a.dataset.view===v?"page":"false"));
-  ["form","report","admin","users","history","summary"].forEach(x=>$("#v-"+x).hidden=x!==v);
+  ["dashboard","form","report","admin","users","history","summary"].forEach(x=>$("#v-"+x).hidden=x!==v);
   $("#bar").hidden=v!=="form"||!S.session;
-  if(v==="form"){renderStrip();renderForm();}if(v==="report")renderReport();if(v==="admin")renderAdmin();if(v==="users")renderUsers();if(v==="history")renderHistory();if(v==="summary")renderSummary();
+  if(v==="dashboard")renderDashboard();if(v==="form"){renderStrip();renderForm();}if(v==="report")renderReport();if(v==="admin")renderAdmin();if(v==="users")renderUsers();if(v==="history")renderHistory();if(v==="summary")renderSummary();
 }
 window.addEventListener("hashchange",()=>{if(S.session)showView(location.hash.slice(1));});
 
@@ -739,6 +768,280 @@ function renderHistory(){
     h+=`<tr><td class="c">${esc(when(a.at))}</td><td class="l">${esc(a.byName||a.by)}</td><td class="l">${esc(a.action)}</td><td class="c">${esc(MSHORT[a.month]||"–")}</td><td class="l chg">${chs}</td><td class="l">${esc(a.reason||"–")}</td></tr>`;});
   h+=`</tbody></table></div>`;
   $("#v-history").innerHTML=h;
+}
+
+// ---------- executive dashboard ----------
+function renderDashboard(){
+  let totRev=0,totExp=0,totNet=0;
+  let totProc=0,totHerb=0;
+  let totHerbExp=0,totProcExp=0,totOtExp=0,totOtherExp=0;
+  let bestMonth=null,bestNet=-Infinity;
+  let activeMonthCount=0;
+
+  const monthlyData=MONTHS.map((m,i)=>{
+    const c=compute(m.key);
+    totRev+=c.rev;
+    totExp+=c.exp;
+    totNet+=c.net;
+    totProc+=c.revProc;
+    totHerb+=c.revHerb;
+    totHerbExp+=(c.cogs||0)+(c.e8||0);
+    totProcExp+=c.proc||0;
+    totOtExp+=c.ot||0;
+    totOtherExp+=c.other||0;
+
+    const hasData=c.rev>0||c.exp>0||statusOf(m.key)==="submitted";
+    if(hasData){
+      activeMonthCount++;
+      if(c.net>bestNet){
+        bestNet=c.net;
+        bestMonth=m;
+      }
+    }
+    return {
+      month:m,
+      rev:c.rev,
+      exp:c.exp,
+      net:c.net,
+      revProc:c.revProc,
+      revHerb:c.revHerb,
+      margin:c.rev>0?(c.net/c.rev*100):0,
+      hasData:hasData,
+      status:statusOf(m.key)
+    };
+  });
+
+  const netMargin=totRev>0?(totNet/totRev*100):0;
+
+  let h=`<div class="dash-header">
+    <div>
+      <h2>ภาพรวมผลการดำเนินงาน ปีงบประมาณ 2570</h2>
+      <p style="margin:4px 0 0;font-size:.92rem;color:var(--muted)">ศูนย์ส่งเสริมสุขภาพแผนไทย “กมลาศรม” สำนักงานสาธารณสุขจังหวัดพิษณุโลก</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn" type="button" id="dashDlBtn" ${(S.downloads||S.standalone)&&window.XLSX?"":"hidden"}>ดาวน์โหลดรายงาน Excel</button>
+    </div>
+  </div>
+
+  <div class="dash-cards">
+    <div class="dash-card rev">
+      <div class="clbl"><span>รายรับรวมสะสม</span><span title="รวมรายได้หัตถการและยาสมุนไพร">ต.ค. 69 – ก.ย. 70</span></div>
+      <div class="cval">฿${fmt(totRev)}</div>
+      <div class="csub"><span>หัตถการ ฿${fmt(totProc)}</span><span>ยาสมุนไพร ฿${fmt(totHerb)}</span></div>
+    </div>
+    <div class="dash-card exp">
+      <div class="clbl"><span>รายจ่ายรวมสะสม</span><span title="รวมต้นทุนยาสมุนไพร หัตถการ ค่าตอบแทน และดำเนินงาน">ต.ค. 69 – ก.ย. 70</span></div>
+      <div class="cval">฿${fmt(totExp)}</div>
+      <div class="csub"><span>ต้นทุนยา ฿${fmt(totHerbExp)}</span><span>หัตถการ+OT ฿${fmt(totProcExp+totOtExp)}</span></div>
+    </div>
+    <div class="dash-card net">
+      <div class="clbl"><span>กำไรสุทธิรวมสะสม</span><span title="รายรับรวมลบรายจ่ายรวม">สุทธิ</span></div>
+      <div class="cval ${totNet>=0?"good":"bad"}">฿${fmt(totNet)}</div>
+      <div class="csub"><span>อัตรากำไร (Margin)</span><b>${netMargin.toFixed(1)}%</b></div>
+    </div>
+    <div class="dash-card best">
+      <div class="clbl"><span>เดือนที่กำไรสูงสุด</span><span>ผลงานดีที่สุด</span></div>
+      <div class="cval" style="font-size:1.45rem">${bestMonth?esc(bestMonth.full):"–"}</div>
+      <div class="csub"><span>${bestMonth?`กำไร ฿${fmt(bestNet)}`:"ยังไม่มีข้อมูล"}</span><b>${bestMonth&&compute(bestMonth.key).rev>0?((bestNet/compute(bestMonth.key).rev*100).toFixed(1)+"%"):""}</b></div>
+    </div>
+  </div>
+
+  <div class="dash-chart-box">
+    <div class="dash-chart-head">
+      <div>
+        <h3>เปรียบเทียบรายรับ – รายจ่าย และกำไรสุทธิ รายเดือน</h3>
+        <p style="margin:4px 0 0;font-size:.86rem;color:var(--muted)">แท่งสีส้ม = รายรับ, แท่งสีน้ำตาล = รายจ่าย, เส้นสีเขียว = กำไรสุทธิ (12 เดือน)</p>
+      </div>
+      <div style="font-size:.86rem;color:var(--muted);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:12px;height:12px;background:#E07038;border-radius:3px;display:inline-block"></i> รายรับ</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:12px;height:12px;background:#A06C50;border-radius:3px;display:inline-block"></i> รายจ่าย</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:14px;height:3px;background:#2E8B57;display:inline-block"></i> กำไรสุทธิ</span>
+      </div>
+    </div>
+    <div class="dash-chart-canvas">
+      <canvas id="dashMainChart"></canvas>
+    </div>
+  </div>
+
+  <div class="dash-chart-box" style="padding:18px 20px">
+    <div class="dash-chart-head" style="margin-bottom:14px">
+      <div>
+        <h3 style="font-size:1.1rem">ตารางสรุปผลการดำเนินงานรายเดือน</h3>
+        <p style="margin:4px 0 0;font-size:.84rem;color:var(--muted)">เลือก "ดูรายงาน" เพื่อเปิดรายงานการเงินประจำเดือนฉบับสมบูรณ์</p>
+      </div>
+    </div>
+    <div class="tw">
+      <table class="t">
+        <thead>
+          <tr>
+            <th class="c">เดือน</th>
+            <th class="r">รวมรายรับ</th>
+            <th class="r">รวมรายจ่าย</th>
+            <th class="r">กำไรสุทธิ</th>
+            <th class="c">อัตรากำไร (%)</th>
+            <th class="c">สถานะ</th>
+            <th class="c" style="width:130px">รายงาน</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  monthlyData.forEach(d=>{
+    const ok=d.status==="submitted";
+    const stLabelText=stLabel(d.month.key);
+    h+=`<tr>
+      <td class="c"><b>${esc(d.month.short)}</b></td>
+      <td class="r">${fmt(d.rev)}</td>
+      <td class="r">${fmt(d.exp)}</td>
+      <td class="r ${d.net<0?"neg":""}" style="font-weight:600">${fmt(d.net)}</td>
+      <td class="c">${d.rev>0?d.margin.toFixed(1)+"%":"–"}</td>
+      <td class="c ${ok?"st-ok":"st-wait"}">${esc(stLabelText)}</td>
+      <td class="c">
+        <button class="btn ghost small" type="button" data-repmonth="${d.month.key}" title="เปิดหน้ารายงานประจำเดือน ${esc(d.month.short)}">ดูรายงาน</button>
+      </td>
+    </tr>`;
+  });
+
+  h+=`</tbody>
+        <tfoot>
+          <tr class="tot">
+            <td class="c">รวมทั้งปี</td>
+            <td class="r">${fmt(totRev)}</td>
+            <td class="r">${fmt(totExp)}</td>
+            <td class="r ${totNet<0?"neg":""}" style="font-weight:700">${fmt(totNet)}</td>
+            <td class="c" style="font-weight:700">${netMargin.toFixed(1)}%</td>
+            <td class="c" colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>`;
+
+  $("#v-dashboard").innerHTML=h;
+  setTimeout(()=>initDashChart(monthlyData), 20);
+}
+
+function initDashChart(monthlyData){
+  const ctx=document.getElementById("dashMainChart");
+  if(!ctx||typeof Chart==="undefined")return;
+  if(S.dashChart){
+    try{S.dashChart.destroy();}catch(e){}
+    S.dashChart=null;
+  }
+  const isDark=document.documentElement.dataset.theme==="dark"||
+    (document.documentElement.dataset.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  const textColor=isDark?"#E5DCD3":"#4A3B32";
+  const mutedColor=isDark?"#A8988B":"#8A7968";
+  const gridColor=isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)";
+
+  const labels=monthlyData.map(d=>d.month.short);
+  const revData=monthlyData.map(d=>d.rev);
+  const expData=monthlyData.map(d=>d.exp);
+  const netData=monthlyData.map(d=>d.net);
+
+  S.dashChart=new Chart(ctx,{
+    data:{
+      labels:labels,
+      datasets:[
+        {
+          type:"line",
+          label:"กำไรสุทธิ",
+          data:netData,
+          borderColor:"#2E8B57",
+          backgroundColor:isDark?"rgba(46,139,87,0.22)":"rgba(46,139,87,0.12)",
+          borderWidth:3,
+          tension:0.32,
+          pointRadius:4,
+          pointHoverRadius:6.5,
+          pointBackgroundColor:"#2E8B57",
+          pointBorderColor:"#FFFFFF",
+          pointBorderWidth:1.5,
+          order:1
+        },
+        {
+          type:"bar",
+          label:"รายรับ",
+          data:revData,
+          backgroundColor:isDark?"rgba(224,112,56,0.85)":"#E07038",
+          borderRadius:6,
+          borderSkipped:false,
+          maxBarThickness:36,
+          order:2
+        },
+        {
+          type:"bar",
+          label:"รายจ่าย",
+          data:expData,
+          backgroundColor:isDark?"rgba(160,108,80,0.85)":"#A06C50",
+          borderRadius:6,
+          borderSkipped:false,
+          maxBarThickness:36,
+          order:3
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{
+        mode:"index",
+        intersect:false
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:isDark?"rgba(30,22,18,0.95)":"rgba(42,31,24,0.95)",
+          titleColor:"#FFFFFF",
+          bodyColor:"#FFFFFF",
+          titleFont:{family:"'Sarabun', sans-serif",size:14,weight:"bold"},
+          bodyFont:{family:"'Sarabun', sans-serif",size:13},
+          padding:12,
+          cornerRadius:8,
+          borderColor:"rgba(224,112,56,0.3)",
+          borderWidth:1,
+          callbacks:{
+            title:function(items){
+              const idx=items[0].dataIndex;
+              return monthlyData[idx].month.full;
+            },
+            label:function(item){
+              const v=item.raw||0;
+              return ` ${item.dataset.label}: ฿${fmt(v)}`;
+            },
+            afterBody:function(items){
+              const idx=items[0].dataIndex;
+              const d=monthlyData[idx];
+              if(d.rev>0){
+                return [` อัตรากำไร: ${d.margin.toFixed(1)}%`];
+              }
+              return [];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:gridColor},
+          ticks:{
+            color:textColor,
+            font:{family:"'Sarabun', sans-serif",size:12}
+          }
+        },
+        y:{
+          grid:{color:gridColor},
+          ticks:{
+            color:mutedColor,
+            font:{family:"'Sarabun', sans-serif",size:11},
+            callback:function(v){
+              if(Math.abs(v)>=1000000)return (v/1000000).toFixed(1)+"M";
+              if(Math.abs(v)>=1000)return (v/1000).toFixed(0)+"k";
+              return v;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 // ---------- summary & export ----------
@@ -1186,8 +1489,9 @@ document.addEventListener("click",e=>{
   if(id==="bUnlock"){if(!armed("unlock")){S.confirm={a:"unlock",k:S.cur,t:Date.now()};updateBar();setTimeout(updateBar,6100);return;}saveMonth("unlock");return;}
   if(id==="admRevert"){S.adminDraft=null;renderAdmin();return;}
   if(id==="admSave"){saveAdmin();return;}
-  if(id==="dlBtn"||id==="repDlAllBtn"){download();return;}
+  if(id==="dlBtn"||id==="repDlAllBtn"||id==="dashDlBtn"){download();return;}
   if(id==="repDlMonthBtn"){downloadMonth(S.curMonthReport||S.cur);return;}
+  if(t.dataset.repmonth){S.curMonthReport=t.dataset.repmonth;location.hash="#report";showView("report");return;}
   if(id==="ufCancel"){S.userForm=blankUserForm();renderUsers();return;}
   if(t.dataset.uedit){const u=t.dataset.uedit,d=S.users[u];if(!d)return;S.userForm={mode:"edit",u,name:d.name,role:d.role,active:d.active!==false,pass:""};renderUsers();$("#ufName").focus();return;}
   if(t.dataset.udel){const u=t.dataset.udel;if(!(S.confirm&&S.confirm.a==="del:"+u&&Date.now()-S.confirm.t<6000)){S.confirm={a:"del:"+u,k:"",t:Date.now()};renderUsers();setTimeout(()=>{if(S.view==="users")renderUsers();},6100);return;}deleteUser(u);return;}
@@ -1197,7 +1501,8 @@ window.addEventListener("beforeunload",e=>{if(MONTHS.some(m=>isDirty(m.key))||S.
 function refreshAll(){
   if(!S.session){restoreSession();if(S.session){renderShell();}return;}
   syncSession();if(!S.session)return;
-  if(S.view==="form"){renderStrip();const focused=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.f;
+  if(S.view==="dashboard")renderDashboard();
+  else if(S.view==="form"){renderStrip();const focused=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.f;
     if(!isDirty(S.cur)&&!focused)renderForm();else updateDerived();}
   else if(S.view==="report")renderReport();
   else if(S.view==="admin"){if(!S.adminDraft)renderAdmin();else updateAdminDerived();}
