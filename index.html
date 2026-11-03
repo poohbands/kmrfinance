@@ -746,16 +746,16 @@ function renderHistory(){
 
 // ---------- summary & export ----------
 function renderSummary(){
-  const inv=inventory(false);let tr=0,te=0,tn=0,tc=0;
+  const inv=inventory(false);let tr=0,te=0,tn=0;
   let h=`<div class="toolbar"><h2>สรุปผลการดำเนินงานรายเดือน ปีงบประมาณ 2570</h2>
    <div style="display:flex;gap:8px;align-items:center"><span class="msg" id="dlMsg"></span><button class="btn" type="button" id="dlBtn" ${(S.downloads||S.standalone)&&window.XLSX?"":"hidden"}>ดาวน์โหลดรายงาน Excel</button></div></div>
-   <div class="tw"><table class="t"><thead><tr><th>เดือน</th><th>รายรับหัตถการ</th><th>รายรับยาสมุนไพร</th><th>รวมรายรับ</th><th>รวมรายจ่าย</th><th>กำไรสุทธิ</th><th>${esc(COGS_LABEL)}</th><th>ยาคงคลัง<br>คงเหลือยกไป</th><th>สถานะ</th></tr></thead><tbody>`;
-  MONTHS.forEach((m,i)=>{const c=compute(m.key);tr+=c.rev;te+=c.exp;tn+=c.net;tc+=inv[i].cogs||0;
+   <div class="tw"><table class="t"><thead><tr><th>เดือน</th><th>รายรับหัตถการ</th><th>รายรับยาสมุนไพร</th><th>รวมรายรับ</th><th>รวมรายจ่าย</th><th>กำไรสุทธิ</th><th>สถานะ</th></tr></thead><tbody>`;
+  MONTHS.forEach((m,i)=>{const c=compute(m.key);tr+=c.rev;te+=c.exp;tn+=c.net;
     const st=[stLabel(m.key)];if(isDirty(m.key))st.push("มีแก้ไขยังไม่บันทึก");if(inv[i].cogs==null)st.push("รอต้นทุนยา");
     const ok=statusOf(m.key)==="submitted"&&inv[i].cogs!=null;
-    h+=`<tr><td class="c">${esc(m.short)}</td><td class="r">${fmt(c.revProc)}</td><td class="r">${fmt(c.revHerb)}</td><td class="r">${fmt(c.rev)}</td><td class="r">${fmt(c.exp)}</td><td class="r ${c.net<0?"neg":""}">${fmt(c.net)}</td><td class="r">${inv[i].cogs==null?"–":fmt(inv[i].cogs)}</td><td class="r ${inv[i].end<0?"neg":""}">${fmt(inv[i].end)}</td><td class="c ${ok?"st-ok":"st-wait"}">${esc(st.join(", "))}</td></tr>`;});
+    h+=`<tr><td class="c">${esc(m.short)}</td><td class="r">${fmt(c.revProc)}</td><td class="r">${fmt(c.revHerb)}</td><td class="r">${fmt(c.rev)}</td><td class="r">${fmt(c.exp)}</td><td class="r ${c.net<0?"neg":""}">${fmt(c.net)}</td><td class="c ${ok?"st-ok":"st-wait"}">${esc(st.join(", "))}</td></tr>`;});
   const col=k=>MONTHS.reduce((s,m)=>s+compute(m.key)[k],0);
-  h+=`</tbody><tfoot><tr class="tot"><td class="c">รวม</td><td class="r">${fmt(col("revProc"))}</td><td class="r">${fmt(col("revHerb"))}</td><td class="r">${fmt(tr)}</td><td class="r">${fmt(te)}</td><td class="r ${tn<0?"neg":""}">${fmt(tn)}</td><td class="r">${fmt(tc)}</td><td class="r">${fmt(inv[11].end)}</td><td></td></tr></tfoot></table></div>
+  h+=`</tbody><tfoot><tr class="tot"><td class="c">รวม</td><td class="r">${fmt(col("revProc"))}</td><td class="r">${fmt(col("revHerb"))}</td><td class="r">${fmt(tr)}</td><td class="r">${fmt(te)}</td><td class="r ${tn<0?"neg":""}">${fmt(tn)}</td><td></td></tr></tfoot></table></div>
    <p class="ref">ไฟล์ Excel ที่ดาวน์โหลดมีรายงานประจำเดือนครบ 12 เดือน (เดือนนี้และสะสมตั้งแต่ต้นปี) พร้อมตารางยาคงคลังและสรุปทั้งปี</p>`;
   $("#v-summary").innerHTML=h;
 }
@@ -1121,11 +1121,11 @@ function sheetFrom(aoa,widths){const ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]
 function buildWorkbook(){
   const wb=XLSX.utils.book_new(),inv=inventory(false);
   const sum=[["สรุปผลการดำเนินงานรายเดือน ปีงบประมาณ 2570"],['ศูนย์ส่งเสริมสุขภาพแผนไทย “กมลาศรม” สำนักงานสาธารณสุขจังหวัดพิษณุโลก'],[],
-    ["เดือน","รายรับหัตถการ","รายรับยาสมุนไพร","รวมรายรับ","รวมรายจ่าย","กำไรสุทธิ",COGS_LABEL,"ยาคงคลังคงเหลือยกไป","สถานะ"]];
-  MONTHS.forEach((m,i)=>{const c=compute(m.key);sum.push([m.short,c.revProc,c.revHerb,c.rev,c.exp,c.net,inv[i].cogs||0,inv[i].end,stLabel(m.key)]);});
+    ["เดือน","รายรับหัตถการ","รายรับยาสมุนไพร","รวมรายรับ","รวมรายจ่าย","กำไรสุทธิ","สถานะ"]];
+  MONTHS.forEach((m,i)=>{const c=compute(m.key);sum.push([m.short,c.revProc,c.revHerb,c.rev,c.exp,c.net,stLabel(m.key)]);});
   const col=k=>MONTHS.reduce((s,m)=>s+compute(m.key)[k],0);
-  sum.push(["รวม",col("revProc"),col("revHerb"),col("rev"),col("exp"),col("net"),inv.reduce((s,r)=>s+(r.cogs||0),0),inv[11].end,""]);
-  XLSX.utils.book_append_sheet(wb,sheetFrom(sum,[12,18,18,18,18,18,26,20,12]),"สรุปปีงบ 2570");
+  sum.push(["รวม",col("revProc"),col("revHerb"),col("rev"),col("exp"),col("net"),""]);
+  XLSX.utils.book_append_sheet(wb,sheetFrom(sum,[12,18,18,18,18,18,14]),"สรุปปีงบ 2570");
   const adm=[["ยาสมุนไพรคงคลัง ปีงบประมาณ 2570 (Admin)"],[],["ยอดยกมา ณ ต้นเดือนตุลาคม 2569",carryUse(false)||0],[],
     ["เดือน","ยอดยาคงคลังยกมา","ค่ายาสมุนไพรที่ซื้อในเดือนนี้",COGS_LABEL,"ยอดยาคงคลังคงเหลือยกไป"]];
   inv.forEach((r,i)=>adm.push([MONTHS[i].short,r.begin,r.purchase,r.cogs||0,r.end]));
