@@ -530,9 +530,6 @@ function renderForm(){
     g.calcs.forEach(([l,k,s])=>{exp+=calcRow(l,k,s);});
     (g.after||[]).forEach(([f,l,h])=>{exp+=inputRow(f,l,h,ex);});exp+="</fieldset>";});
   exp+=`<div class="calc big"><span>รวมรายจ่ายทั้งหมด</span><span class="v" data-o="exp">0.00</span></div>`+calcRow("รวมจ่ายตั้งแต่ต้นปี","cumExp",1);
-  exp+=`<fieldset style="margin-top:18px"><legend>ยาสมุนไพรคงคลัง (ราคาทุน)</legend>
-    ${calcRow("ยอดยาคงคลังยกมา","invBegin",1)}${calcRow("บวก ค่ายาสมุนไพรที่ซื้อในเดือนนี้","invBuy",1)}
-    ${calcRow("หัก "+COGS_LABEL,"invCogs",1)}${calcRow("ยอดยาคงคลังคงเหลือยกไป","invEnd")}</fieldset>`;
   $("#revSide").innerHTML=rev;$("#expSide").innerHTML=exp;
   S.noticeSig=null;updateDerived();
 }
