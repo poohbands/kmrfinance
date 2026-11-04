@@ -344,6 +344,53 @@ table.t td.l{text-align:left}
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- Modal สำหรับกรอก/แก้ไขจำนวนผู้ใช้บริการ (Admin เท่านั้น) -->
+<div id="visitsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)">
+  <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:18px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 36px rgba(0,0,0,0.25);overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h3 style="margin:0;font-size:1.2rem;color:var(--ink)">สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง)</h3>
+        <p style="margin:3px 0 0;font-size:.84rem;color:var(--muted)">กรอกจำนวนครั้งผู้รับบริการแยกเพศ ชาย - หญิง ปีงบ 2570 (เฉพาะ Admin)</p>
+      </div>
+      <button type="button" id="btnCloseVisitsModal" class="btn ghost small" style="padding:4px 10px;font-size:1rem;cursor:pointer" title="ปิด">✕</button>
+    </div>
+    
+    <div style="padding:16px 20px;overflow-y:auto;flex:1">
+      <div class="tw">
+        <table class="t">
+          <thead>
+            <tr>
+              <th class="c">เดือน</th>
+              <th class="c" style="width:130px">เพศชาย (ครั้ง)</th>
+              <th class="c" style="width:130px">เพศหญิง (ครั้ง)</th>
+              <th class="r">รวม (ครั้ง)</th>
+              <th class="c" style="width:120px">สัดส่วน (ช : ญ)</th>
+            </tr>
+          </thead>
+          <tbody id="visitsModalBody"></tbody>
+          <tfoot>
+            <tr class="tot">
+              <td class="c">รวมทั้งปี</td>
+              <td class="r" id="modalTotMale">0</td>
+              <td class="r" id="modalTotFemale">0</td>
+              <td class="r" id="modalTotAll">0</td>
+              <td class="c" id="modalTotRatio">–</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div style="padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:var(--bg);flex-wrap:wrap;gap:10px">
+      <span class="msg" id="visitsModalMsg"></span>
+      <div style="display:flex;gap:10px">
+        <button type="button" class="btn ghost" id="btnCancelVisitsModal">ยกเลิก</button>
+        <button type="button" class="btn" id="btnSaveVisitsModal">บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
@@ -389,7 +436,7 @@ const EXP=[
 const FIELDS=[],LABEL={};
 REV.concat(EXP).forEach(g=>{g.items.concat(g.after||[]).forEach(i=>{FIELDS.push(i[0]);LABEL[i[0]]=(g.title.indexOf("รายได้")===0?"รายรับ ":"รายจ่าย ")+i[1];});});
 
-const S={view:"form",cur:MONTHS[0].key,dashChart:null,dashPieChart:null,dashPieFilter:"all",curMonthReport:null,months:{},admin:{carry:null,cogs:{},menus:{}},drafts:{},adminDraft:null,adminNote:"",
+const S={view:"form",cur:MONTHS[0].key,dashChart:null,dashPieChart:null,dashVisitsChart:null,dashPieFilter:"all",curMonthReport:null,months:{},admin:{carry:null,cogs:{},menus:{},visits:{}},drafts:{},adminDraft:null,adminNote:"",
   users:{},usersLoaded:false,audit:[],session:null,reason:"",confirm:null,histMonth:"",userForm:null,
   mode:"loading",standalone:false,canAdmin:false,readonlyMonths:false,db:null,downloads:null,saving:false};
 
@@ -453,7 +500,7 @@ function inventory(useDraft){
 
 // ---------- persistence ----------
 const LS="kamalasrom-fy2570-v1";
-function localLoad(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");S.months=o.months||{};S.admin=o.admin||{carry:null,cogs:{},menus:{}};if(!S.admin.cogs)S.admin.cogs={};if(!S.admin.menus)S.admin.menus={};S.users=o.users||{};S.audit=o.audit||[];}catch(e){}}
+function localLoad(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");S.months=o.months||{};S.admin=o.admin||{carry:null,cogs:{},menus:{},visits:{}};if(!S.admin.cogs)S.admin.cogs={};if(!S.admin.menus)S.admin.menus={};if(!S.admin.visits)S.admin.visits={};S.users=o.users||{};S.audit=o.audit||[];}catch(e){}}
 function localSave(){try{localStorage.setItem(LS,JSON.stringify({months:S.months,admin:S.admin,users:S.users,audit:S.audit.slice(0,500)}));return true;}catch(e){return false;}}
 async function persistMonth(key,doc){
   if(S.mode==="db"){await S.db.collection("months").doc(key).set(doc);}
@@ -738,6 +785,58 @@ function renderAdmin(){
   h+=`</tbody><tfoot><tr class="tot"><td class="c">รวมทั้งปี</td><td class="r" id="tBegin">${inv[0].carryMissing?"–":fmt(inv[0].begin)}</td><td class="r">${fmt(tb)}</td><td class="r" id="tCogs">0.00</td><td class="r" id="tEnd">0.00</td><td></td></tr></tfoot></table></div>`;
   if(isAdmin())h+=`<label class="admnote">หมายเหตุการแก้ไข (บันทึกลงประวัติ)<input id="admNoteIn" value="${esc(S.adminNote)}" placeholder="เช่น ปรับต้นทุนตามผลตรวจนับคลัง"></label>`;
   h+=`<p class="ref">อ้างอิงปีงบ 2569 จากรายงานเดิม: ซื้อยาสมุนไพรทั้งปี 6,392,275.00 บาท และต้นทุนยาที่ขายทั้งปี 6,021,500.60 บาท · ยอดคงเหลือ ณ ก.ย.70 ใช้เป็นยอดยกมาของปีงบ 2571</p>`;
+  if(isAdmin()){
+    let totVM=0,totVF=0;
+    h+=`<div class="dash-chart-box" style="margin-top:24px;padding:22px" id="adminVisitsBox">
+      <div class="dash-chart-head">
+        <div>
+          <h3 style="font-size:1.15rem">สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง) แยกเพศ ชาย - หญิง</h3>
+          <p style="margin:4px 0 0;font-size:.85rem;color:var(--muted)">กรอกจำนวนครั้งของผู้รับบริการ (ข้อมูลนี้จะถูกนำไปแสดงบนแดชบอร์ดเป็นกราฟแท่ง)</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn small" type="button" id="btnAdminSaveVisits">บันทึกสถิติผู้ใช้บริการ</button>
+        </div>
+      </div>
+      <div class="tw">
+        <table class="t">
+          <thead>
+            <tr>
+              <th class="c">เดือน</th>
+              <th class="c" style="width:160px">เพศชาย (ครั้ง)</th>
+              <th class="c" style="width:160px">เพศหญิง (ครั้ง)</th>
+              <th class="r">รวม (ครั้ง)</th>
+              <th class="c" style="width:130px">สัดส่วน (ช : ญ)</th>
+            </tr>
+          </thead>
+          <tbody>`;
+    MONTHS.forEach(m=>{
+      const v=getVisits(m.key);
+      totVM+=v.m;totVF+=v.f;
+      const rTot=v.m+v.f;
+      const ratio=rTot>0?`${(v.m/rTot*100).toFixed(0)}% : ${(v.f/rTot*100).toFixed(0)}%`:"–";
+      h+=`<tr>
+        <td class="c"><b>${esc(m.short)}</b></td>
+        <td class="inp"><input type="number" min="0" step="1" data-adm-vm="${m.key}" value="${v.m||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
+        <td class="inp"><input type="number" min="0" step="1" data-adm-vf="${m.key}" value="${v.f||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
+        <td class="r" data-adm-vtot="${m.key}" style="font-weight:600">${rTot.toLocaleString()}</td>
+        <td class="c" data-adm-vratio="${m.key}" style="font-size:.82rem;color:var(--muted)">${ratio}</td>
+      </tr>`;
+    });
+    const totVAll=totVM+totVF;
+    h+=`</tbody>
+          <tfoot>
+            <tr class="tot">
+              <td class="c">รวมทั้งปี</td>
+              <td class="r" id="admTotMale">${totVM.toLocaleString()}</td>
+              <td class="r" id="admTotFemale">${totVF.toLocaleString()}</td>
+              <td class="r" id="admTotAll">${totVAll.toLocaleString()}</td>
+              <td class="c" id="admTotRatio">${totVAll>0?`${(totVM/totVAll*100).toFixed(0)}% : ${(totVF/totVAll*100).toFixed(0)}%`:"–"}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>`;
+  }
   $("#v-admin").innerHTML=h;updateAdminDerived();
 }
 function updateAdminDerived(){
@@ -761,7 +860,7 @@ async function saveAdmin(){
     if(r.value!=null)cogs[m.key]=r.value;const p=cogsSaved(m.key);if((p==null?null:p)!==(r.value==null?null:r.value))changes.push({f:"cogs",label:COGS_LABEL+" "+m.short,from:p||0,to:r.value||0});}
   const pc=typeof S.admin.carry==="number"?S.admin.carry:null;if(isAdm&&pc!==(cr.value==null?null:cr.value))changes.unshift({f:"carry",label:"ยอดยกมา ณ ต้นเดือนตุลาคม 2569",from:pc||0,to:cr.value||0});
   S.saving=true;updateAdminDerived();msg.className="msg";msg.textContent="กำลังบันทึก…";
-  try{await persistAdmin({carry:cr.value,cogs,updatedAt:new Date().toISOString(),updatedBy:S.session.u});
+  try{await persistAdmin(Object.assign({},S.admin,{carry:cr.value,cogs,updatedAt:new Date().toISOString(),updatedBy:S.session.u}));
     for(const m of MONTHS){
       if(cogs[m.key]!=null){
         const curM=S.months[m.key]||{v:{},x:{},status:"draft"};
@@ -990,9 +1089,105 @@ function renderHistory(){
   $("#v-history").innerHTML=h;
 }
 
+function getVisits(key){
+  const v=(S.admin&&S.admin.visits&&S.admin.visits[key])||{m:0,f:0};
+  const m=Number(v.m)||0;
+  const f=Number(v.f)||0;
+  return {m,f,tot:m+f};
+}
+
+function openVisitsModal(){
+  const modal=$("#visitsModal");if(!modal)return;
+  const tbody=$("#visitsModalBody");
+  let h="";
+  MONTHS.forEach(m=>{
+    const v=getVisits(m.key);
+    const rowTot=v.m+v.f;
+    const ratio=rowTot>0?`${(v.m/rowTot*100).toFixed(0)}% : ${(v.f/rowTot*100).toFixed(0)}%`:"–";
+    h+=`<tr data-vrow="${m.key}">
+      <td class="c"><b>${esc(m.short)}</b></td>
+      <td class="inp">
+        <input type="number" min="0" step="1" data-vm-m="${m.key}" value="${v.m||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
+      </td>
+      <td class="inp">
+        <input type="number" min="0" step="1" data-vm-f="${m.key}" value="${v.f||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
+      </td>
+      <td class="r" data-vm-tot="${m.key}" style="font-weight:600">${rowTot.toLocaleString()}</td>
+      <td class="c" data-vm-ratio="${m.key}" style="font-size:.82rem;color:var(--muted)">${ratio}</td>
+    </tr>`;
+  });
+  tbody.innerHTML=h;
+  updateVisitsModalTotals();
+  const msg=$("#visitsModalMsg");if(msg){msg.className="msg";msg.textContent="";}
+  modal.style.display="flex";
+}
+
+function updateVisitsModalTotals(){
+  let totM=0,totF=0;
+  MONTHS.forEach(m=>{
+    const inM=$(`[data-vm-m="${m.key}"]`);
+    const inF=$(`[data-vm-f="${m.key}"]`);
+    const valM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
+    const valF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
+    totM+=valM;totF+=valF;
+    const rowTot=valM+valF;
+    const totCell=$(`[data-vm-tot="${m.key}"]`);if(totCell)totCell.textContent=rowTot.toLocaleString();
+    const ratioCell=$(`[data-vm-ratio="${m.key}"]`);
+    if(ratioCell)ratioCell.textContent=rowTot>0?`${(valM/rowTot*100).toFixed(0)}% : ${(valF/rowTot*100).toFixed(0)}%`:"–";
+  });
+  const totAll=totM+totF;
+  if($("#modalTotMale"))$("#modalTotMale").textContent=totM.toLocaleString();
+  if($("#modalTotFemale"))$("#modalTotFemale").textContent=totF.toLocaleString();
+  if($("#modalTotAll"))$("#modalTotAll").textContent=totAll.toLocaleString();
+  if($("#modalTotRatio"))$("#modalTotRatio").textContent=totAll>0?`${(totM/totAll*100).toFixed(0)}% : ${(totF/totAll*100).toFixed(0)}%`:"–";
+}
+
+async function saveVisitsFromModal(){
+  if(!isAdmin())return;
+  const newVisits={};
+  MONTHS.forEach(m=>{
+    const inM=$(`[data-vm-m="${m.key}"]`);
+    const inF=$(`[data-vm-f="${m.key}"]`);
+    const valM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
+    const valF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
+    if(valM>0||valF>0||(inM&&inM.value!=="")||(inF&&inF.value!=="")){
+      newVisits[m.key]={m:valM,f:valF};
+    }
+  });
+
+  const msg=$("#visitsModalMsg");
+  if(msg){msg.className="msg";msg.textContent="กำลังบันทึก...";}
+
+  try{
+    if(!S.admin)S.admin={carry:null,cogs:{},menus:{},visits:{}};
+    S.admin.visits=newVisits;
+    await persistAdmin(S.admin);
+    await logAudit({
+      action:"บันทึกสถิติผู้ใช้บริการ",
+      month:"",
+      reason:"อัปเดตสถิติจำนวนผู้รับบริการแยกเพศ ชาย - หญิง"
+    });
+    toast("บันทึกสถิติผู้ใช้บริการเรียบร้อยแล้ว");
+    $("#visitsModal").style.display="none";
+    if(S.view==="dashboard")renderDashboard();
+    if(S.view==="admin")renderAdmin();
+  }catch(err){
+    if(msg){msg.className="msg err";msg.textContent="เกิดข้อผิดพลาดในการบันทึก";}
+    toast("บันทึกไม่สำเร็จ");
+  }
+}
+
 // ---------- executive dashboard ----------
 function renderDashboard(){
   let totRev=0,totExp=0,totNet=0;
+  let totVisitsMale=0,totVisitsFemale=0;
+  MONTHS.forEach(m=>{
+    const v=getVisits(m.key);
+    totVisitsMale+=v.m;totVisitsFemale+=v.f;
+  });
+  const totVisitsAll=totVisitsMale+totVisitsFemale;
+  const pctVisitsMale=totVisitsAll>0?(totVisitsMale/totVisitsAll*100):0;
+  const pctVisitsFemale=totVisitsAll>0?(totVisitsFemale/totVisitsAll*100):0;
   let totProc=0,totHerb=0;
   let totHerbExp=0,totProcExp=0,totOtExp=0,totOtherExp=0;
   let totProfProc=0,totProfHerb=0;
@@ -1159,6 +1354,51 @@ function renderDashboard(){
     </div>
   </div>
 
+  <!-- Chart 3: Service Visits Bar Chart (Male / Female) -->
+  <div class="dash-chart-box">
+    <div class="dash-chart-head">
+      <div>
+        <h3>สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง)</h3>
+        <p style="margin:4px 0 0;font-size:.86rem;color:var(--muted)">เปรียบเทียบสถิติผู้รับบริการ แยกเพศ ชาย – หญิง รายเดือน ปีงบประมาณ 2570</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        ${isAdmin() ? `<button class="btn ghost small" type="button" id="btnOpenVisitsModal">✏️ กรอก/แก้ไขจำนวนผู้ใช้บริการ</button>` : ""}
+      </div>
+    </div>
+
+    <!-- 3 Summary Badges -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px">
+      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:.82rem;color:var(--muted);font-weight:600">รวมผู้ใช้บริการทั้งปี</div>
+          <div style="font-size:1.35rem;font-weight:700;color:var(--ink);margin-top:2px">${totVisitsAll.toLocaleString()} ครั้ง</div>
+          <div style="font-size:.78rem;color:var(--muted)">เฉลี่ยเดือนละ ${Math.round(totVisitsAll/12).toLocaleString()} ครั้ง</div>
+        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(224,112,56,.12);color:#E07038;display:flex;align-items:center;justify-content:center;font-size:1.25rem">👥</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;border-left:4px solid #3B82F6;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:.82rem;color:var(--muted);font-weight:600">เพศชาย</div>
+          <div style="font-size:1.35rem;font-weight:700;color:#2563EB;margin-top:2px">${totVisitsMale.toLocaleString()} ครั้ง</div>
+          <div style="font-size:.78rem;color:var(--muted)">${pctVisitsMale.toFixed(1)}% ของผู้ใช้บริการ</div>
+        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.12);color:#2563EB;display:flex;align-items:center;justify-content:center;font-size:1.25rem">👨</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;border-left:4px solid #EC4899;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:.82rem;color:var(--muted);font-weight:600">เพศหญิง</div>
+          <div style="font-size:1.35rem;font-weight:700;color:#DB2777;margin-top:2px">${totVisitsFemale.toLocaleString()} ครั้ง</div>
+          <div style="font-size:.78rem;color:var(--muted)">${pctVisitsFemale.toFixed(1)}% ของผู้ใช้บริการ</div>
+        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(236,72,153,.12);color:#DB2777;display:flex;align-items:center;justify-content:center;font-size:1.25rem">👩</div>
+      </div>
+    </div>
+
+    <div class="dash-chart-canvas" style="height:320px">
+      <canvas id="dashVisitsChart"></canvas>
+    </div>
+  </div>
+
   <div class="dash-chart-box" style="padding:18px 20px">
     <div class="dash-chart-head" style="margin-bottom:14px">
       <div>
@@ -1216,6 +1456,7 @@ function renderDashboard(){
   setTimeout(()=>{
     initDashChart(monthlyData);
     initDashPieChart(curProfProc, curProfHerb, pctProc, pctHerb);
+    initDashVisitsChart();
   }, 20);
 }
 
@@ -1448,6 +1689,126 @@ function initDashPieChart(valProc, valHerb, pctProc, pctHerb){
       }
     },
     plugins:[sliceLabelPlugin]
+  });
+}
+
+
+function initDashVisitsChart(){
+  const ctx=document.getElementById("dashVisitsChart");
+  if(!ctx||typeof Chart==="undefined")return;
+  if(S.dashVisitsChart){
+    try{S.dashVisitsChart.destroy();}catch(e){}
+    S.dashVisitsChart=null;
+  }
+
+  const isDark=document.documentElement.dataset.theme==="dark"||
+    (document.documentElement.dataset.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  const textColor=isDark?"#E5DCD3":"#4A3B32";
+  const mutedColor=isDark?"#A8988B":"#8A7968";
+  const gridColor=isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)";
+
+  const labels=MONTHS.map(m=>m.short);
+  const maleData=MONTHS.map(m=>getVisits(m.key).m);
+  const femaleData=MONTHS.map(m=>getVisits(m.key).f);
+
+  S.dashVisitsChart=new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[
+        {
+          label:"เพศชาย (ครั้ง)",
+          data:maleData,
+          backgroundColor:isDark?"rgba(59, 130, 246, 0.85)":"#3B82F6",
+          borderRadius:4,
+          maxBarThickness:34,
+          stack:"visits"
+        },
+        {
+          label:"เพศหญิง (ครั้ง)",
+          data:femaleData,
+          backgroundColor:isDark?"rgba(236, 72, 153, 0.85)":"#EC4899",
+          borderRadius:4,
+          maxBarThickness:34,
+          stack:"visits"
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{
+        mode:"index",
+        intersect:false
+      },
+      plugins:{
+        legend:{
+          display:true,
+          position:"top",
+          labels:{
+            boxWidth:12,
+            boxHeight:12,
+            usePointStyle:true,
+            pointStyle:"circle",
+            color:isDark?"#E5DCD3":"#4A3B32",
+            font:{family:"'Sarabun', sans-serif",size:12,weight:"bold"},
+            padding:14
+          }
+        },
+        tooltip:{
+          backgroundColor:isDark?"rgba(30,22,18,0.95)":"rgba(42,31,24,0.95)",
+          titleColor:"#FFFFFF",
+          bodyColor:"#FFFFFF",
+          titleFont:{family:"'Sarabun', sans-serif",size:14,weight:"bold"},
+          bodyFont:{family:"'Sarabun', sans-serif",size:13},
+          padding:12,
+          cornerRadius:8,
+          borderColor:"rgba(224,112,56,0.3)",
+          borderWidth:1,
+          callbacks:{
+            title:function(items){
+              const idx=items[0].dataIndex;
+              return MONTHS[idx].full;
+            },
+            label:function(item){
+              const v=item.raw||0;
+              const idx=item.dataIndex;
+              const tot=(maleData[idx]||0)+(femaleData[idx]||0);
+              const pct=tot>0?(v/tot*100).toFixed(1)+"%":"0%";
+              return ` ${item.dataset.label}: ${v.toLocaleString()} ครั้ง (${pct})`;
+            },
+            afterBody:function(items){
+              const idx=items[0].dataIndex;
+              const tot=(maleData[idx]||0)+(femaleData[idx]||0);
+              return [` รวมทั้งสิ้น: ${tot.toLocaleString()} ครั้ง`];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          stacked:true,
+          grid:{color:gridColor},
+          ticks:{
+            color:textColor,
+            font:{family:"'Sarabun', sans-serif",size:12}
+          }
+        },
+        y:{
+          stacked:true,
+          grid:{color:gridColor},
+          ticks:{
+            color:mutedColor,
+            font:{family:"'Sarabun', sans-serif",size:11},
+            callback:function(v){
+              if(Math.floor(v)===v)return v.toLocaleString();
+              return "";
+            }
+          }
+        }
+      }
+    }
   });
 }
 
@@ -1878,6 +2239,26 @@ document.addEventListener("input",e=>{
   if(t.id==="reasonIn"){S.reason=t.value;return;}
   if(S.userForm&&(t.id==="ufU"||t.id==="ufName")){S.userForm[t.id==="ufU"?"u":"name"]=t.value;return;}
   if(t.id==="admNoteIn"){S.adminNote=t.value;return;}
+  if(t.dataset&&(t.dataset.vmM||t.dataset.vmF)){updateVisitsModalTotals();return;}
+  if(t.dataset&&(t.dataset.admVm||t.dataset.admVf)){
+    let tM=0,tF=0;
+    MONTHS.forEach(m=>{
+      const inM=$(`[data-adm-vm="${m.key}"]`);
+      const inF=$(`[data-adm-vf="${m.key}"]`);
+      const vM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
+      const vF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
+      tM+=vM;tF+=vF;
+      const rTot=vM+vF;
+      const totEl=$(`[data-adm-vtot="${m.key}"]`);if(totEl)totEl.textContent=rTot.toLocaleString();
+      const ratEl=$(`[data-adm-vratio="${m.key}"]`);if(ratEl)ratEl.textContent=rTot>0?`${(vM/rTot*100).toFixed(0)}% : ${(vF/rTot*100).toFixed(0)}%`:"–";
+    });
+    const tAll=tM+tF;
+    if($("#admTotMale"))$("#admTotMale").textContent=tM.toLocaleString();
+    if($("#admTotFemale"))$("#admTotFemale").textContent=tF.toLocaleString();
+    if($("#admTotAll"))$("#admTotAll").textContent=tAll.toLocaleString();
+    if($("#admTotRatio"))$("#admTotRatio").textContent=tAll>0?`${(tM/tAll*100).toFixed(0)}% : ${(tF/tAll*100).toFixed(0)}%`:"–";
+    return;
+  }
   if(t.id==="carryIn"||(t.dataset&&t.dataset.cogs)){if(!S.adminDraft)S.adminDraft=JSON.parse(JSON.stringify(adminState()));
     if(t.id==="carryIn")S.adminDraft.carry=t.value;else S.adminDraft.cogs[t.dataset.cogs]=t.value;
     const m=$("#admMsg");if(m){m.className="msg";m.textContent="มีการแก้ไขที่ยังไม่บันทึก";}updateAdminDerived();}
@@ -1896,6 +2277,29 @@ document.addEventListener("click",e=>{
   if(id==="bUnlock"){if(!armed("unlock")){S.confirm={a:"unlock",k:S.cur,t:Date.now()};updateBar();setTimeout(updateBar,6100);return;}saveMonth("unlock");return;}
   if(id==="admRevert"){S.adminDraft=null;renderAdmin();return;}
   if(id==="admSave"){saveAdmin();return;}
+  if(id==="btnOpenVisitsModal"){openVisitsModal();return;}
+  if(id==="btnCloseVisitsModal"||id==="btnCancelVisitsModal"){const m=$("#visitsModal");if(m)m.style.display="none";return;}
+  if(id==="btnSaveVisitsModal"){saveVisitsFromModal();return;}
+  if(id==="btnAdminSaveVisits"){
+    const newVisits={};
+    MONTHS.forEach(m=>{
+      const inM=$(`[data-adm-vm="${m.key}"]`);
+      const inF=$(`[data-adm-vf="${m.key}"]`);
+      const valM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
+      const valF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
+      if(valM>0||valF>0||(inM&&inM.value!=="")||(inF&&inF.value!=="")){
+        newVisits[m.key]={m:valM,f:valF};
+      }
+    });
+    if(!S.admin)S.admin={carry:null,cogs:{},menus:{},visits:{}};
+    S.admin.visits=newVisits;
+    persistAdmin(S.admin).then(()=>{
+      logAudit({action:"บันทึกสถิติผู้ใช้บริการ",month:"",reason:"อัปเดตสถิติจำนวนผู้รับบริการแยกเพศ ชาย - หญิง"});
+      toast("บันทึกสถิติผู้ใช้บริการเรียบร้อยแล้ว");
+      renderAdmin();
+    }).catch(()=>{toast("บันทึกไม่สำเร็จ");});
+    return;
+  }
   if(t.dataset.togglemenu){toggleMenuState(t.dataset.togglemenu, t.dataset.action==="enable");return;}
   if(id==="btnEnableAll"){toggleAllMenus(true);return;}
   if(id==="btnDisableAll"){toggleAllMenus(false);return;}
@@ -1958,9 +2362,10 @@ async function boot(){
         if(dRes.ok){
           const d=await dRes.json();
           S.months=d.months||{};
-          S.admin=d.admin||{carry:null,cogs:{},menus:{}};
+          S.admin=d.admin||{carry:null,cogs:{},menus:{},visits:{}};
           if(!S.admin.cogs)S.admin.cogs={};
           if(!S.admin.menus)S.admin.menus={};
+          if(!S.admin.visits)S.admin.visits={};
           S.users=d.users||{};
           S.audit=d.audit||[];
           S.usersLoaded=true;
