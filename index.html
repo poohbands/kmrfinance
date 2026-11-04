@@ -346,11 +346,11 @@ table.t td.l{text-align:left}
 
 <!-- Modal สำหรับกรอก/แก้ไขจำนวนผู้ใช้บริการ (Admin เท่านั้น) -->
 <div id="visitsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)">
-  <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:18px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 36px rgba(0,0,0,0.25);overflow:hidden">
+  <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:18px;max-width:820px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 36px rgba(0,0,0,0.25);overflow:hidden">
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
       <div>
-        <h3 style="margin:0;font-size:1.2rem;color:var(--ink)">สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง)</h3>
-        <p style="margin:3px 0 0;font-size:.84rem;color:var(--muted)">กรอกจำนวนครั้งผู้รับบริการแยกเพศ ชาย - หญิง ปีงบ 2570 (เฉพาะ Admin)</p>
+        <h3 style="margin:0;font-size:1.2rem;color:var(--ink)">สถิติผู้ใช้บริการ และสิทธิ์การรักษา (จำนวนครั้ง)</h3>
+        <p style="margin:3px 0 0;font-size:.84rem;color:var(--muted)">กรอกจำนวนครั้งผู้รับบริการ แยกเพศ (ชาย/หญิง) และแยกสิทธิ์ (เบิกกรมบัญชีกลาง/ชำระเงินเอง) ปีงบ 2570 (เฉพาะ Admin)</p>
       </div>
       <button type="button" id="btnCloseVisitsModal" class="btn ghost small" style="padding:4px 10px;font-size:1rem;cursor:pointer" title="ปิด">✕</button>
     </div>
@@ -360,11 +360,16 @@ table.t td.l{text-align:left}
         <table class="t">
           <thead>
             <tr>
-              <th class="c">เดือน</th>
-              <th class="c" style="width:130px">เพศชาย (ครั้ง)</th>
-              <th class="c" style="width:130px">เพศหญิง (ครั้ง)</th>
-              <th class="r">รวม (ครั้ง)</th>
-              <th class="c" style="width:120px">สัดส่วน (ช : ญ)</th>
+              <th rowspan="2" class="c" style="vertical-align:middle">เดือน</th>
+              <th colspan="2" class="c" style="background:rgba(59,130,246,0.1);color:#2563EB">แยกตามเพศ (ครั้ง)</th>
+              <th colspan="2" class="c" style="background:rgba(217,119,6,0.1);color:#D97706">แยกตามสิทธิ์การรักษา (ครั้ง)</th>
+              <th rowspan="2" class="r" style="vertical-align:middle">รวม (ครั้ง)</th>
+            </tr>
+            <tr>
+              <th class="c" style="width:115px">เพศชาย</th>
+              <th class="c" style="width:115px">เพศหญิง</th>
+              <th class="c" style="width:130px">เบิกกรมบัญชีกลาง</th>
+              <th class="c" style="width:130px">ชำระเงินเอง</th>
             </tr>
           </thead>
           <tbody id="visitsModalBody"></tbody>
@@ -373,8 +378,9 @@ table.t td.l{text-align:left}
               <td class="c">รวมทั้งปี</td>
               <td class="r" id="modalTotMale">0</td>
               <td class="r" id="modalTotFemale">0</td>
+              <td class="r" id="modalTotCGD">0</td>
+              <td class="r" id="modalTotSelf">0</td>
               <td class="r" id="modalTotAll">0</td>
-              <td class="c" id="modalTotRatio">–</td>
             </tr>
           </tfoot>
         </table>
@@ -436,7 +442,7 @@ const EXP=[
 const FIELDS=[],LABEL={};
 REV.concat(EXP).forEach(g=>{g.items.concat(g.after||[]).forEach(i=>{FIELDS.push(i[0]);LABEL[i[0]]=(g.title.indexOf("รายได้")===0?"รายรับ ":"รายจ่าย ")+i[1];});});
 
-const S={view:"form",cur:MONTHS[0].key,dashChart:null,dashPieChart:null,dashVisitsChart:null,dashPieFilter:"all",curMonthReport:null,months:{},admin:{carry:null,cogs:{},menus:{},visits:{}},drafts:{},adminDraft:null,adminNote:"",
+const S={view:"form",cur:MONTHS[0].key,dashChart:null,dashPieChart:null,dashVisitsChart:null,dashRightsChart:null,dashPieFilter:"all",dashRightsFilter:"all",curMonthReport:null,months:{},admin:{carry:null,cogs:{},menus:{},visits:{}},drafts:{},adminDraft:null,adminNote:"",
   users:{},usersLoaded:false,audit:[],session:null,reason:"",confirm:null,histMonth:"",userForm:null,
   mode:"loading",standalone:false,canAdmin:false,readonlyMonths:false,db:null,downloads:null,saving:false};
 
@@ -787,11 +793,12 @@ function renderAdmin(){
   h+=`<p class="ref">อ้างอิงปีงบ 2569 จากรายงานเดิม: ซื้อยาสมุนไพรทั้งปี 6,392,275.00 บาท และต้นทุนยาที่ขายทั้งปี 6,021,500.60 บาท · ยอดคงเหลือ ณ ก.ย.70 ใช้เป็นยอดยกมาของปีงบ 2571</p>`;
   if(isAdmin()){
     let totVM=0,totVF=0;
+    let totVCGD=0,totVSelf=0;
     h+=`<div class="dash-chart-box" style="margin-top:24px;padding:22px" id="adminVisitsBox">
       <div class="dash-chart-head">
         <div>
-          <h3 style="font-size:1.15rem">สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง) แยกเพศ ชาย - หญิง</h3>
-          <p style="margin:4px 0 0;font-size:.85rem;color:var(--muted)">กรอกจำนวนครั้งของผู้รับบริการ (ข้อมูลนี้จะถูกนำไปแสดงบนแดชบอร์ดเป็นกราฟแท่ง)</p>
+          <h3 style="font-size:1.15rem">สถิติผู้ใช้บริการ และสิทธิ์การรักษา (จำนวนครั้ง)</h3>
+          <p style="margin:4px 0 0;font-size:.85rem;color:var(--muted)">กรอกจำนวนครั้งผู้รับบริการ แยกเพศ (ชาย/หญิง) และแยกสิทธิ์ (เบิกกรมบัญชีกลาง/ชำระเงินเอง) สำหรับนำไปแสดงบนแดชบอร์ด</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn small" type="button" id="btnAdminSaveVisits">บันทึกสถิติผู้ใช้บริการ</button>
@@ -801,36 +808,42 @@ function renderAdmin(){
         <table class="t">
           <thead>
             <tr>
-              <th class="c">เดือน</th>
-              <th class="c" style="width:160px">เพศชาย (ครั้ง)</th>
-              <th class="c" style="width:160px">เพศหญิง (ครั้ง)</th>
-              <th class="r">รวม (ครั้ง)</th>
-              <th class="c" style="width:130px">สัดส่วน (ช : ญ)</th>
+              <th rowspan="2" class="c" style="vertical-align:middle">เดือน</th>
+              <th colspan="2" class="c" style="background:rgba(59,130,246,0.1);color:#2563EB">แยกตามเพศ (ครั้ง)</th>
+              <th colspan="2" class="c" style="background:rgba(217,119,6,0.1);color:#D97706">แยกตามสิทธิ์การรักษา (ครั้ง)</th>
+              <th rowspan="2" class="r" style="vertical-align:middle">รวม (ครั้ง)</th>
+            </tr>
+            <tr>
+              <th class="c" style="width:125px">เพศชาย</th>
+              <th class="c" style="width:125px">เพศหญิง</th>
+              <th class="c" style="width:145px">เบิกกรมบัญชีกลาง</th>
+              <th class="c" style="width:145px">ชำระเงินเอง</th>
             </tr>
           </thead>
           <tbody>`;
     MONTHS.forEach(m=>{
       const v=getVisits(m.key);
-      totVM+=v.m;totVF+=v.f;
-      const rTot=v.m+v.f;
-      const ratio=rTot>0?`${(v.m/rTot*100).toFixed(0)}% : ${(v.f/rTot*100).toFixed(0)}%`:"–";
+      totVM+=v.m;totVF+=v.f;totVCGD+=v.cgd;totVSelf+=v.self;
+      const rTot=(v.m+v.f)||(v.cgd+v.self);
       h+=`<tr>
         <td class="c"><b>${esc(m.short)}</b></td>
-        <td class="inp"><input type="number" min="0" step="1" data-adm-vm="${m.key}" value="${v.m||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
-        <td class="inp"><input type="number" min="0" step="1" data-adm-vf="${m.key}" value="${v.f||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
+        <td class="inp"><input type="number" min="0" step="1" data-adm-vm="${m.key}" value="${v.m||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
+        <td class="inp"><input type="number" min="0" step="1" data-adm-vf="${m.key}" value="${v.f||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
+        <td class="inp"><input type="number" min="0" step="1" data-adm-vcgd="${m.key}" value="${v.cgd||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
+        <td class="inp"><input type="number" min="0" step="1" data-adm-vself="${m.key}" value="${v.self||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit"></td>
         <td class="r" data-adm-vtot="${m.key}" style="font-weight:600">${rTot.toLocaleString()}</td>
-        <td class="c" data-adm-vratio="${m.key}" style="font-size:.82rem;color:var(--muted)">${ratio}</td>
       </tr>`;
     });
-    const totVAll=totVM+totVF;
+    const totVAll=(totVM+totVF)||(totVCGD+totVSelf);
     h+=`</tbody>
           <tfoot>
             <tr class="tot">
               <td class="c">รวมทั้งปี</td>
               <td class="r" id="admTotMale">${totVM.toLocaleString()}</td>
               <td class="r" id="admTotFemale">${totVF.toLocaleString()}</td>
+              <td class="r" id="admTotCGD">${totVCGD.toLocaleString()}</td>
+              <td class="r" id="admTotSelf">${totVSelf.toLocaleString()}</td>
               <td class="r" id="admTotAll">${totVAll.toLocaleString()}</td>
-              <td class="c" id="admTotRatio">${totVAll>0?`${(totVM/totVAll*100).toFixed(0)}% : ${(totVF/totVAll*100).toFixed(0)}%`:"–"}</td>
             </tr>
           </tfoot>
         </table>
@@ -1090,10 +1103,12 @@ function renderHistory(){
 }
 
 function getVisits(key){
-  const v=(S.admin&&S.admin.visits&&S.admin.visits[key])||{m:0,f:0};
+  const v=(S.admin&&S.admin.visits&&S.admin.visits[key])||{m:0,f:0,cgd:0,self:0};
   const m=Number(v.m)||0;
   const f=Number(v.f)||0;
-  return {m,f,tot:m+f};
+  const cgd=Number(v.cgd)||0;
+  const self=Number(v.self)||0;
+  return {m,f,totGender:m+f,cgd,self,totRights:cgd+self,tot:(m+f)||(cgd+self)};
 }
 
 function openVisitsModal(){
@@ -1102,18 +1117,22 @@ function openVisitsModal(){
   let h="";
   MONTHS.forEach(m=>{
     const v=getVisits(m.key);
-    const rowTot=v.m+v.f;
-    const ratio=rowTot>0?`${(v.m/rowTot*100).toFixed(0)}% : ${(v.f/rowTot*100).toFixed(0)}%`:"–";
+    const rowTot=(v.m+v.f)||(v.cgd+v.self);
     h+=`<tr data-vrow="${m.key}">
       <td class="c"><b>${esc(m.short)}</b></td>
       <td class="inp">
-        <input type="number" min="0" step="1" data-vm-m="${m.key}" value="${v.m||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
+        <input type="number" min="0" step="1" data-vm-m="${m.key}" value="${v.m||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
       </td>
       <td class="inp">
-        <input type="number" min="0" step="1" data-vm-f="${m.key}" value="${v.f||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
+        <input type="number" min="0" step="1" data-vm-f="${m.key}" value="${v.f||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
+      </td>
+      <td class="inp">
+        <input type="number" min="0" step="1" data-vm-cgd="${m.key}" value="${v.cgd||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
+      </td>
+      <td class="inp">
+        <input type="number" min="0" step="1" data-vm-self="${m.key}" value="${v.self||""}" placeholder="0" style="text-align:right;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit">
       </td>
       <td class="r" data-vm-tot="${m.key}" style="font-weight:600">${rowTot.toLocaleString()}</td>
-      <td class="c" data-vm-ratio="${m.key}" style="font-size:.82rem;color:var(--muted)">${ratio}</td>
     </tr>`;
   });
   tbody.innerHTML=h;
@@ -1123,23 +1142,26 @@ function openVisitsModal(){
 }
 
 function updateVisitsModalTotals(){
-  let totM=0,totF=0;
+  let totM=0,totF=0,totCGD=0,totSelf=0;
   MONTHS.forEach(m=>{
     const inM=$(`[data-vm-m="${m.key}"]`);
     const inF=$(`[data-vm-f="${m.key}"]`);
+    const inCGD=$(`[data-vm-cgd="${m.key}"]`);
+    const inSelf=$(`[data-vm-self="${m.key}"]`);
     const valM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
     const valF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
-    totM+=valM;totF+=valF;
-    const rowTot=valM+valF;
+    const valCGD=Math.max(0,parseInt(inCGD?inCGD.value:0,10)||0);
+    const valSelf=Math.max(0,parseInt(inSelf?inSelf.value:0,10)||0);
+    totM+=valM;totF+=valF;totCGD+=valCGD;totSelf+=valSelf;
+    const rowTot=(valM+valF)||(valCGD+valSelf);
     const totCell=$(`[data-vm-tot="${m.key}"]`);if(totCell)totCell.textContent=rowTot.toLocaleString();
-    const ratioCell=$(`[data-vm-ratio="${m.key}"]`);
-    if(ratioCell)ratioCell.textContent=rowTot>0?`${(valM/rowTot*100).toFixed(0)}% : ${(valF/rowTot*100).toFixed(0)}%`:"–";
   });
-  const totAll=totM+totF;
+  const totAll=(totM+totF)||(totCGD+totSelf);
   if($("#modalTotMale"))$("#modalTotMale").textContent=totM.toLocaleString();
   if($("#modalTotFemale"))$("#modalTotFemale").textContent=totF.toLocaleString();
+  if($("#modalTotCGD"))$("#modalTotCGD").textContent=totCGD.toLocaleString();
+  if($("#modalTotSelf"))$("#modalTotSelf").textContent=totSelf.toLocaleString();
   if($("#modalTotAll"))$("#modalTotAll").textContent=totAll.toLocaleString();
-  if($("#modalTotRatio"))$("#modalTotRatio").textContent=totAll>0?`${(totM/totAll*100).toFixed(0)}% : ${(totF/totAll*100).toFixed(0)}%`:"–";
 }
 
 async function saveVisitsFromModal(){
@@ -1148,10 +1170,14 @@ async function saveVisitsFromModal(){
   MONTHS.forEach(m=>{
     const inM=$(`[data-vm-m="${m.key}"]`);
     const inF=$(`[data-vm-f="${m.key}"]`);
+    const inCGD=$(`[data-vm-cgd="${m.key}"]`);
+    const inSelf=$(`[data-vm-self="${m.key}"]`);
     const valM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
     const valF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
-    if(valM>0||valF>0||(inM&&inM.value!=="")||(inF&&inF.value!=="")){
-      newVisits[m.key]={m:valM,f:valF};
+    const valCGD=Math.max(0,parseInt(inCGD?inCGD.value:0,10)||0);
+    const valSelf=Math.max(0,parseInt(inSelf?inSelf.value:0,10)||0);
+    if(valM>0||valF>0||valCGD>0||valSelf>0||(inM&&inM.value!=="")||(inF&&inF.value!=="")||(inCGD&&inCGD.value!=="")||(inSelf&&inSelf.value!=="")){
+      newVisits[m.key]={m:valM,f:valF,cgd:valCGD,self:valSelf};
     }
   });
 
@@ -1165,7 +1191,7 @@ async function saveVisitsFromModal(){
     await logAudit({
       action:"บันทึกสถิติผู้ใช้บริการ",
       month:"",
-      reason:"อัปเดตสถิติจำนวนผู้รับบริการแยกเพศ ชาย - หญิง"
+      reason:"อัปเดตสถิติจำนวนผู้รับบริการ ชาย-หญิง และสิทธิ์เบิกกรมบัญชีกลาง-ชำระเงินเอง"
     });
     toast("บันทึกสถิติผู้ใช้บริการเรียบร้อยแล้ว");
     $("#visitsModal").style.display="none";
@@ -1180,14 +1206,27 @@ async function saveVisitsFromModal(){
 // ---------- executive dashboard ----------
 function renderDashboard(){
   let totRev=0,totExp=0,totNet=0;
-  let totVisitsMale=0,totVisitsFemale=0;
+  let totVisitsMale=0,totVisitsFemale=0,totVisitsCGD=0,totVisitsSelf=0;
   MONTHS.forEach(m=>{
     const v=getVisits(m.key);
     totVisitsMale+=v.m;totVisitsFemale+=v.f;
+    totVisitsCGD+=v.cgd;totVisitsSelf+=v.self;
   });
-  const totVisitsAll=totVisitsMale+totVisitsFemale;
+  const totVisitsAll=(totVisitsMale+totVisitsFemale)||(totVisitsCGD+totVisitsSelf);
   const pctVisitsMale=totVisitsAll>0?(totVisitsMale/totVisitsAll*100):0;
   const pctVisitsFemale=totVisitsAll>0?(totVisitsFemale/totVisitsAll*100):0;
+
+  // Selected period for Rights Doughnut Chart
+  let curCGD=totVisitsCGD;
+  let curSelf=totVisitsSelf;
+  if(S.dashRightsFilter&&S.dashRightsFilter!=="all"){
+    const vSel=getVisits(S.dashRightsFilter);
+    curCGD=vSel.cgd;
+    curSelf=vSel.self;
+  }
+  const curTotRights=curCGD+curSelf;
+  const pctCGD=curTotRights>0?((curCGD/curTotRights)*100):0;
+  const pctSelf=curTotRights>0?((curSelf/curTotRights)*100):0;
   let totProc=0,totHerb=0;
   let totHerbExp=0,totProcExp=0,totOtExp=0,totOtherExp=0;
   let totProfProc=0,totProfHerb=0;
@@ -1354,48 +1393,91 @@ function renderDashboard(){
     </div>
   </div>
 
-  <!-- Chart 3: Service Visits Bar Chart (Male / Female) -->
-  <div class="dash-chart-box">
-    <div class="dash-chart-head">
+  <!-- Row 3: Service Visits Grid (Gender Bar Chart + Rights Doughnut Chart) -->
+  <div class="dash-grid-charts">
+    <!-- Chart 3: Service Visits Bar Chart (Male / Female) -->
+    <div class="dash-chart-box" style="margin-bottom:0">
+      <div class="dash-chart-head">
+        <div>
+          <h3>สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง)</h3>
+          <p style="margin:4px 0 0;font-size:.86rem;color:var(--muted)">เปรียบเทียบสถิติผู้รับบริการ แยกเพศ ชาย – หญิง รายเดือน (ปีงบ 2570)</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          ${isAdmin() ? `<button class="btn ghost small" type="button" id="btnOpenVisitsModal">✏️ กรอกสถิติผู้ใช้บริการ</button>` : ""}
+        </div>
+      </div>
+
+      <!-- 3 Summary Badges -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px">
+          <div style="font-size:.78rem;color:var(--muted);font-weight:600">รวมผู้ใช้บริการทั้งปี</div>
+          <div style="font-size:1.2rem;font-weight:700;color:var(--ink);margin-top:2px">${totVisitsAll.toLocaleString()} ครั้ง</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;border-left:3.5px solid #3B82F6">
+          <div style="font-size:.78rem;color:var(--muted);font-weight:600">เพศชาย (${pctVisitsMale.toFixed(1)}%)</div>
+          <div style="font-size:1.2rem;font-weight:700;color:#2563EB;margin-top:2px">${totVisitsMale.toLocaleString()} ครั้ง</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;border-left:3.5px solid #EC4899">
+          <div style="font-size:.78rem;color:var(--muted);font-weight:600">เพศหญิง (${pctVisitsFemale.toFixed(1)}%)</div>
+          <div style="font-size:1.2rem;font-weight:700;color:#DB2777;margin-top:2px">${totVisitsFemale.toLocaleString()} ครั้ง</div>
+        </div>
+      </div>
+
+      <div class="dash-chart-canvas" style="height:300px">
+        <canvas id="dashVisitsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 4: Service Rights Doughnut Chart (CGD vs Self-Pay) -->
+    <div class="dash-chart-box" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:space-between">
       <div>
-        <h3>สถิติจำนวนผู้ใช้บริการ (จำนวนครั้ง)</h3>
-        <p style="margin:4px 0 0;font-size:.86rem;color:var(--muted)">เปรียบเทียบสถิติผู้รับบริการ แยกเพศ ชาย – หญิง รายเดือน ปีงบประมาณ 2570</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        ${isAdmin() ? `<button class="btn ghost small" type="button" id="btnOpenVisitsModal">✏️ กรอก/แก้ไขจำนวนผู้ใช้บริการ</button>` : ""}
-      </div>
-    </div>
+        <div class="dash-chart-head" style="align-items:flex-start">
+          <div>
+            <h3>สัดส่วนสิทธิ์ผู้ใช้บริการ</h3>
+            <p style="margin:4px 0 0;font-size:.86rem;color:var(--muted)">เปรียบเทียบเบิกกรมบัญชีกลาง vs ชำระเงินเอง</p>
+          </div>
+          <div>
+            <select id="dashRightsSel" style="padding:5px 9px;font-size:.86rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:inherit">
+              <option value="all" ${S.dashRightsFilter==="all"?"selected":""}>ทั้งปีงบ 2570 (สะสม)</option>
+              ${MONTHS.map(m=>`<option value="${m.key}" ${S.dashRightsFilter===m.key?"selected":""}>${esc(m.short)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
 
-    <!-- 3 Summary Badges -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px">
-      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:.82rem;color:var(--muted);font-weight:600">รวมผู้ใช้บริการทั้งปี</div>
-          <div style="font-size:1.35rem;font-weight:700;color:var(--ink);margin-top:2px">${totVisitsAll.toLocaleString()} ครั้ง</div>
-          <div style="font-size:.78rem;color:var(--muted)">เฉลี่ยเดือนละ ${Math.round(totVisitsAll/12).toLocaleString()} ครั้ง</div>
+        <div style="position:relative;width:100%;height:220px;display:flex;align-items:center;justify-content:center;margin:8px 0">
+          <canvas id="dashRightsChart"></canvas>
         </div>
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(224,112,56,.12);color:#E07038;display:flex;align-items:center;justify-content:center;font-size:1.25rem">👥</div>
       </div>
-      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;border-left:4px solid #3B82F6;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:.82rem;color:var(--muted);font-weight:600">เพศชาย</div>
-          <div style="font-size:1.35rem;font-weight:700;color:#2563EB;margin-top:2px">${totVisitsMale.toLocaleString()} ครั้ง</div>
-          <div style="font-size:.78rem;color:var(--muted)">${pctVisitsMale.toFixed(1)}% ของผู้ใช้บริการ</div>
-        </div>
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.12);color:#2563EB;display:flex;align-items:center;justify-content:center;font-size:1.25rem">👨</div>
-      </div>
-      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 16px;border-left:4px solid #EC4899;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:.82rem;color:var(--muted);font-weight:600">เพศหญิง</div>
-          <div style="font-size:1.35rem;font-weight:700;color:#DB2777;margin-top:2px">${totVisitsFemale.toLocaleString()} ครั้ง</div>
-          <div style="font-size:.78rem;color:var(--muted)">${pctVisitsFemale.toFixed(1)}% ของผู้ใช้บริการ</div>
-        </div>
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(236,72,153,.12);color:#DB2777;display:flex;align-items:center;justify-content:center;font-size:1.25rem">👩</div>
-      </div>
-    </div>
 
-    <div class="dash-chart-canvas" style="height:320px">
-      <canvas id="dashVisitsChart"></canvas>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-radius:10px;border-left:4px solid #2563EB">
+          <div>
+            <div style="font-size:.88rem;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:6px">
+              <i style="width:10px;height:10px;background:#2563EB;border-radius:50%;display:inline-block"></i>
+              เบิกกรมบัญชีกลาง
+            </div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:2px">ข้าราชการ / ผู้มีสิทธิ์เบิกจ่ายตรง</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.05rem;font-weight:700;color:var(--ink)">${curCGD.toLocaleString()} ครั้ง</div>
+            <div style="font-size:.85rem;font-weight:700;color:#2563EB">${pctCGD.toFixed(1)}%</div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-radius:10px;border-left:4px solid #D97706">
+          <div>
+            <div style="font-size:.88rem;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:6px">
+              <i style="width:10px;height:10px;background:#D97706;border-radius:50%;display:inline-block"></i>
+              ชำระเงินเอง
+            </div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:2px">ผู้รับบริการชำระเงินสด / โอนเงิน</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.05rem;font-weight:700;color:var(--ink)">${curSelf.toLocaleString()} ครั้ง</div>
+            <div style="font-size:.85rem;font-weight:700;color:#D97706">${pctSelf.toFixed(1)}%</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1457,6 +1539,7 @@ function renderDashboard(){
     initDashChart(monthlyData);
     initDashPieChart(curProfProc, curProfHerb, pctProc, pctHerb);
     initDashVisitsChart();
+    initDashRightsChart(curCGD, curSelf, pctCGD, pctSelf);
   }, 20);
 }
 
@@ -1809,6 +1892,113 @@ function initDashVisitsChart(){
         }
       }
     }
+  });
+}
+
+function initDashRightsChart(valCGD, valSelf, pctCGD, pctSelf){
+  const ctx=document.getElementById("dashRightsChart");
+  if(!ctx||typeof Chart==="undefined")return;
+  if(S.dashRightsChart){
+    try{S.dashRightsChart.destroy();}catch(e){}
+    S.dashRightsChart=null;
+  }
+
+  const isDark=document.documentElement.dataset.theme==="dark"||
+    (document.documentElement.dataset.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  const hasData=(valCGD>0||valSelf>0);
+  const dataValues=hasData?[Math.max(0,valCGD),Math.max(0,valSelf)]:[1,1];
+  const bgColors=hasData?["#2563EB","#D97706"]:(isDark?["rgba(255,255,255,0.12)","rgba(255,255,255,0.06)"]:["#E5DCD3","#F2EBE5"]);
+  const hoverColors=hasData?["#1D4ED8","#B45309"]:bgColors;
+
+  const sliceLabelPlugin={
+    id:"sliceRightsPercentages",
+    afterDraw(chart){
+      if(!hasData)return;
+      const {ctx}=chart;
+      const meta=chart.getDatasetMeta(0);
+      if(!meta||!meta.data)return;
+
+      meta.data.forEach((element,idx)=>{
+        const pct=idx===0?pctCGD:pctSelf;
+        if(pct<=0)return;
+        const pos=element.tooltipPosition();
+        ctx.save();
+        ctx.fillStyle="#FFFFFF";
+        ctx.font="bold 13px 'Sarabun', sans-serif";
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        ctx.shadowColor="rgba(0,0,0,0.5)";
+        ctx.shadowBlur=4;
+        ctx.fillText(pct.toFixed(1)+"%", pos.x, pos.y);
+        ctx.restore();
+      });
+    }
+  };
+
+  S.dashRightsChart=new Chart(ctx,{
+    type:"doughnut",
+    data:{
+      labels:["เบิกกรมบัญชีกลาง","ชำระเงินเอง"],
+      datasets:[{
+        data:dataValues,
+        backgroundColor:bgColors,
+        hoverBackgroundColor:hoverColors,
+        borderColor:isDark?"#241D18":"#FFFFFF",
+        borderWidth:2,
+        hoverOffset:6
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      cutout:"52%",
+      plugins:{
+        legend:{
+          display:true,
+          position:"top",
+          labels:{
+            boxWidth:12,
+            boxHeight:12,
+            usePointStyle:true,
+            pointStyle:"circle",
+            color:isDark?"#E5DCD3":"#4A3B32",
+            font:{family:"'Sarabun', sans-serif",size:11.5,weight:"bold"},
+            padding:12,
+            generateLabels:function(chart){
+              const original=Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart);
+              return original.map((item,idx)=>{
+                if(!hasData)return item;
+                const pct=idx===0?pctCGD.toFixed(1):pctSelf.toFixed(1);
+                item.text=`${item.text} (${pct}%)`;
+                return item;
+              });
+            }
+          }
+        },
+        tooltip:{
+          backgroundColor:isDark?"rgba(30,22,18,0.95)":"rgba(42,31,24,0.95)",
+          titleColor:"#FFFFFF",
+          bodyColor:"#FFFFFF",
+          titleFont:{family:"'Sarabun', sans-serif",size:13,weight:"bold"},
+          bodyFont:{family:"'Sarabun', sans-serif",size:13},
+          padding:10,
+          cornerRadius:8,
+          borderColor:"rgba(224,112,56,0.3)",
+          borderWidth:1,
+          callbacks:{
+            label:function(item){
+              if(!hasData)return " ยังไม่มีข้อมูล";
+              const idx=item.dataIndex;
+              const val=idx===0?valCGD:valSelf;
+              const pct=idx===0?pctCGD.toFixed(1):pctSelf.toFixed(1);
+              return ` ${item.label}: ${val.toLocaleString()} ครั้ง (${pct}%)`;
+            }
+          }
+        }
+      }
+    },
+    plugins:[sliceLabelPlugin]
   });
 }
 
@@ -2239,24 +2429,28 @@ document.addEventListener("input",e=>{
   if(t.id==="reasonIn"){S.reason=t.value;return;}
   if(S.userForm&&(t.id==="ufU"||t.id==="ufName")){S.userForm[t.id==="ufU"?"u":"name"]=t.value;return;}
   if(t.id==="admNoteIn"){S.adminNote=t.value;return;}
-  if(t.dataset&&(t.dataset.vmM||t.dataset.vmF)){updateVisitsModalTotals();return;}
-  if(t.dataset&&(t.dataset.admVm||t.dataset.admVf)){
-    let tM=0,tF=0;
+  if(t.dataset&&(t.dataset.vmM||t.dataset.vmF||t.dataset.vmCgd||t.dataset.vmSelf)){updateVisitsModalTotals();return;}
+  if(t.dataset&&(t.dataset.admVm||t.dataset.admVf||t.dataset.admVcgd||t.dataset.admVself)){
+    let tM=0,tF=0,tCGD=0,tSelf=0;
     MONTHS.forEach(m=>{
       const inM=$(`[data-adm-vm="${m.key}"]`);
       const inF=$(`[data-adm-vf="${m.key}"]`);
+      const inCGD=$(`[data-adm-vcgd="${m.key}"]`);
+      const inSelf=$(`[data-adm-vself="${m.key}"]`);
       const vM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
       const vF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
-      tM+=vM;tF+=vF;
-      const rTot=vM+vF;
+      const vCGD=Math.max(0,parseInt(inCGD?inCGD.value:0,10)||0);
+      const vSelf=Math.max(0,parseInt(inSelf?inSelf.value:0,10)||0);
+      tM+=vM;tF+=vF;tCGD+=vCGD;tSelf+=vSelf;
+      const rTot=(vM+vF)||(vCGD+vSelf);
       const totEl=$(`[data-adm-vtot="${m.key}"]`);if(totEl)totEl.textContent=rTot.toLocaleString();
-      const ratEl=$(`[data-adm-vratio="${m.key}"]`);if(ratEl)ratEl.textContent=rTot>0?`${(vM/rTot*100).toFixed(0)}% : ${(vF/rTot*100).toFixed(0)}%`:"–";
     });
-    const tAll=tM+tF;
+    const tAll=(tM+tF)||(tCGD+tSelf);
     if($("#admTotMale"))$("#admTotMale").textContent=tM.toLocaleString();
     if($("#admTotFemale"))$("#admTotFemale").textContent=tF.toLocaleString();
+    if($("#admTotCGD"))$("#admTotCGD").textContent=tCGD.toLocaleString();
+    if($("#admTotSelf"))$("#admTotSelf").textContent=tSelf.toLocaleString();
     if($("#admTotAll"))$("#admTotAll").textContent=tAll.toLocaleString();
-    if($("#admTotRatio"))$("#admTotRatio").textContent=tAll>0?`${(tM/tAll*100).toFixed(0)}% : ${(tF/tAll*100).toFixed(0)}%`:"–";
     return;
   }
   if(t.id==="carryIn"||(t.dataset&&t.dataset.cogs)){if(!S.adminDraft)S.adminDraft=JSON.parse(JSON.stringify(adminState()));
@@ -2264,7 +2458,7 @@ document.addEventListener("input",e=>{
     const m=$("#admMsg");if(m){m.className="msg";m.textContent="มีการแก้ไขที่ยังไม่บันทึก";}updateAdminDerived();}
 });
 document.addEventListener("change",e=>{const t=e.target;if(t.id==="histSel"){S.histMonth=t.value;renderHistory();}
-  if(t.id==="repMonthSel"){S.curMonthReport=t.value;renderReport();}if(t.id==="dashPieSel"){S.dashPieFilter=t.value;renderDashboard();}
+  if(t.id==="repMonthSel"){S.curMonthReport=t.value;renderReport();}if(t.id==="dashPieSel"){S.dashPieFilter=t.value;renderDashboard();}if(t.id==="dashRightsSel"){S.dashRightsFilter=t.value;renderDashboard();}
   if(S.userForm&&t.id==="ufRole")S.userForm.role=t.value;if(S.userForm&&t.id==="ufActive")S.userForm.active=t.checked;});
 document.addEventListener("submit",e=>{if(e.target.id==="userForm"){e.preventDefault();saveUserForm();}});
 document.addEventListener("click",e=>{
@@ -2285,10 +2479,14 @@ document.addEventListener("click",e=>{
     MONTHS.forEach(m=>{
       const inM=$(`[data-adm-vm="${m.key}"]`);
       const inF=$(`[data-adm-vf="${m.key}"]`);
+      const inCGD=$(`[data-adm-vcgd="${m.key}"]`);
+      const inSelf=$(`[data-adm-vself="${m.key}"]`);
       const valM=Math.max(0,parseInt(inM?inM.value:0,10)||0);
       const valF=Math.max(0,parseInt(inF?inF.value:0,10)||0);
-      if(valM>0||valF>0||(inM&&inM.value!=="")||(inF&&inF.value!=="")){
-        newVisits[m.key]={m:valM,f:valF};
+      const valCGD=Math.max(0,parseInt(inCGD?inCGD.value:0,10)||0);
+      const valSelf=Math.max(0,parseInt(inSelf?inSelf.value:0,10)||0);
+      if(valM>0||valF>0||valCGD>0||valSelf>0||(inM&&inM.value!=="")||(inF&&inF.value!=="")||(inCGD&&inCGD.value!=="")||(inSelf&&inSelf.value!=="")){
+        newVisits[m.key]={m:valM,f:valF,cgd:valCGD,self:valSelf};
       }
     });
     if(!S.admin)S.admin={carry:null,cogs:{},menus:{},visits:{}};
